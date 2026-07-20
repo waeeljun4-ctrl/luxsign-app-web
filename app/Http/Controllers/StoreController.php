@@ -1,0 +1,48 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Category;
+use App\Models\DiscountCampaign;
+use App\Models\HeroSlide;
+use App\Models\Product;
+use Inertia\Inertia;
+
+class StoreController extends Controller
+{
+    public function portfolio()
+    {
+        return Inertia::render('Portfolio');
+    }
+
+    public function testimonials()
+    {
+        return Inertia::render('Testimonials');
+    }
+
+    public function index()
+    {
+        $heroSlides = HeroSlide::active()->get();
+        $categories = Category::active()->get(['id', 'parent_id', 'name', 'name_he', 'name_en', 'icon', 'image', 'key']);
+
+        $products = Product::active()
+            ->with('category:id,parent_id,name,name_he,name_en,icon,key')
+            ->get([
+                'id', 'category_id',
+                'name', 'name_he', 'name_en',
+                'description', 'description_he', 'description_en',
+                'icon', 'image', 'video', 'video_url', 'badge',
+                'pricing_type', 'price', 'compare_price', 'preset_sizes',
+                'size_prices', 'compare_prices', 'qty_labels', 'max_size', 'shape',
+                'designer_type', 'track_stock', 'stock_quantity',
+            ]);
+
+        $products = DiscountCampaign::applyToProducts($products);
+
+        return Inertia::render('Store/Index', [
+            'heroSlides' => $heroSlides,
+            'categories' => $categories,
+            'products'   => $products,
+        ]);
+    }
+}

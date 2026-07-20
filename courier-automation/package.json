@@ -1,0 +1,9 @@
+{
+  "name": "courier-automation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Generic, config-driven browser automation for delivery-company parcel creation. Reads a courier company's login URL, credentials, and CSS-selector field map from a JSON file, and fills their 'add shipment' form for each order.",
+  "dependencies": {
+    "playwright": "^1.47.0"
+  }
+}
