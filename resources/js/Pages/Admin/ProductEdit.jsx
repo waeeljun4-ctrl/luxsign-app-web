@@ -11,7 +11,8 @@ const PRICING_TYPES = [
     { value: 'pair_width',     label: 'جوز حسب العرض' },
     { value: 'single_width',   label: 'قطعة حسب العرض' },
     { value: 'fixed_per_size', label: 'سعر ثابت لكل حجم' },
-    { value: 'plate_qty',      label: 'سعر حسب الكمية' },
+    { value: 'plate_qty',      label: 'سعر حسب الكمية (جدول أسعار)' },
+    { value: 'fixed_qty',      label: 'سعر ثابت × كمية حرة' },
 ];
 
 const PRICING_INFO = {
@@ -19,10 +20,11 @@ const PRICING_INFO = {
     sqm:            'السعر لكل م² — يُحسب: (العرض × الارتفاع بالمتر) × السعر. الحد الأدنى 150₪.',
     plate_pair:     'سعر ثابت للنمرتين معاً.',
     plate_single:   'سعر ثابت للنمرة الواحدة.',
-    pair_width:     'سعر الجوز لكل سم عرض.',
-    single_width:   'سعر القطعة الواحدة لكل سم عرض.',
+    pair_width:     'سعر الجوز لكل سم — يُحسب على البعد الأكبر بين الطول والعرض يلي بيدخله الزبون، مش العرض بس.',
+    single_width:   'سعر القطعة الواحدة لكل سم — يُحسب على البعد الأكبر بين الطول والعرض يلي بيدخله الزبون، مش العرض بس.',
     fixed_per_size: 'أحجام جاهزة فقط — كل حجم له سعره الخاص، والزبون يختار من القائمة بدون إدخال حجم حر.',
     plate_qty:      'الزبون يختار الكمية من قائمة جاهزة (مثلاً: قطعة، قطعتين...) ولكل كمية سعرها الخاص.',
+    fixed_qty:      'سعر ثابت للقطعة الواحدة (تحدده إنت) بغض النظر عن الحجم — الزبون يختار حجم من قائمة (إذا حطيت أحجام) ويحدد الكمية بزر +/-، والإجمالي = السعر × الكمية.',
 };
 
 const SHAPE_TYPES = [
@@ -84,7 +86,7 @@ function Textarea({ label, error, ...props }) {
     );
 }
 
-export default function ProductEdit({ product, categories }) {
+export default function ProductEdit({ product, categories, specFields, specTemplates }) {
     const isNew = !product;
     const imgRef = useRef(null);
     const vidRef = useRef(null);
@@ -95,7 +97,7 @@ export default function ProductEdit({ product, categories }) {
     const [deletingImg, setDeletingImg]   = useState(false);
     const [deletingVid, setDeletingVid]   = useState(false);
 
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         category_id:    product?.category_id ?? '',
         name:           product?.name ?? '',
         name_he:        product?.name_he ?? '',
@@ -105,13 +107,16 @@ export default function ProductEdit({ product, categories }) {
         description_en: product?.description_en ?? '',
         icon:           product?.icon ?? '',
         badge:          product?.badge ?? '',
+        is_custom:      product?.is_custom ?? false,
         pricing_type:   product?.pricing_type ?? 'fixed',
         price:          product?.price ?? '',
-        stock_quantity: product?.stock_quantity ?? '',
+        min_price:      product?.min_price ?? '',
+        show_min_price: product?.show_min_price ?? false,
         preset_sizes:   product?.preset_sizes?.join(',') ?? '',
         size_prices:    product?.size_prices ?? [],
         compare_prices: product?.compare_prices ?? [],
         qty_labels:     product?.qty_labels ?? [],
+        fixed_size_label: product?.fixed_size_label ?? '',
         shape:          product?.shape ?? 'rectangle',
         designer_type:  product?.designer_type ?? 'none',
         is_active:      product?.is_active ?? true,
@@ -185,6 +190,11 @@ export default function ProductEdit({ product, categories }) {
             onFinish: () => setDeletingVid(false),
         });
     }
+
+    // Custom-order products carry no real pricing — force harmless
+    // placeholder values so the (still-required) price/pricing_type fields
+    // validate, without showing or using them anywhere for this product.
+    transform(d => d.is_custom ? { ...d, pricing_type: 'fixed', price: 0 } : d);
 
     function submit(e) {
         e.preventDefault();
@@ -415,7 +425,28 @@ export default function ProductEdit({ product, categories }) {
                                     placeholder="Short product description in English..." />
                             </div>
 
+                            {/* نوع المنتج */}
+                            <div className="bg-white rounded-2xl border border-cream-3 p-4 space-y-2">
+                                <p className="font-black text-ink text-sm mb-1">🏷️ نوع المنتج</p>
+                                <div className="flex gap-3">
+                                    <label className={`flex-1 text-center cursor-pointer px-3 py-2.5 rounded-xl border-2 font-bold text-sm transition-colors ${!data.is_custom ? 'border-gold bg-gold-pale text-gold' : 'border-cream-3 text-muted'}`}>
+                                        <input type="radio" className="hidden" checked={!data.is_custom} onChange={() => setData('is_custom', false)} />
+                                        جاهز — بسعر محدد
+                                    </label>
+                                    <label className={`flex-1 text-center cursor-pointer px-3 py-2.5 rounded-xl border-2 font-bold text-sm transition-colors ${data.is_custom ? 'border-gold bg-gold-pale text-gold' : 'border-cream-3 text-muted'}`}>
+                                        <input type="radio" className="hidden" checked={data.is_custom} onChange={() => setData('is_custom', true)} />
+                                        تفصيل — بدون سعر
+                                    </label>
+                                </div>
+                                {data.is_custom && (
+                                    <p className="text-xs text-muted">
+                                        هاد التصنيف للإدارة بس — الزبون ما بيشوفه إطلاقاً. المنتج بيظهر بدون سعر، والزبون يعبي المواصفات بدل هيك (قسم "🧩 مواصفات مخصصة" تحت، بعد ما تحفظ المنتج أول مرة)، وإنت بتسعّره يدوياً بعد ما توصلك الطلبية.
+                                    </p>
+                                )}
+                            </div>
+
                             {/* التسعير */}
+                            {!data.is_custom && (
                             <div className="bg-white rounded-2xl border border-cream-3 p-4 space-y-3">
                                 <p className="font-black text-ink text-sm mb-1">💰 التسعير</p>
 
@@ -444,11 +475,26 @@ export default function ProductEdit({ product, categories }) {
                                     💡 {PRICING_INFO[data.pricing_type]}
                                 </div>
 
-                                <Input label="الكمية المتوفرة (اختياري)" type="number" min="0"
-                                    value={data.stock_quantity} onChange={e => setData('stock_quantity', e.target.value)}
-                                    placeholder="اتركها فاضية لكمية غير محدودة" error={errors.stock_quantity} />
+                                <div className="border border-cream-3 rounded-xl p-3 space-y-2">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" checked={data.show_min_price}
+                                            onChange={e => setData('show_min_price', e.target.checked)}
+                                            className="accent-gold" />
+                                        <span className="text-sm font-bold text-ink">تفعيل "يبدأ من" (حد أدنى للسعر المعروض)</span>
+                                    </label>
+                                    <p className="text-xs text-muted">
+                                        إذا فعّلتها، الزبون ما رح يشوف ولا يدفع أي سعر أقل من هاد الرقم — حتى لو السعر الفعلي المحسوب أوطى.
+                                    </p>
+                                    {data.show_min_price && (
+                                        <Input label="أقل سعر معروض (₪)" type="number" min="0" step="0.01"
+                                            value={data.min_price}
+                                            onChange={e => setData('min_price', e.target.value)}
+                                            error={errors.min_price} placeholder="1000" />
+                                    )}
+                                </div>
+
                                 <p className="text-xs text-muted">
-                                    لو حطيت رقم، بينخصم أوتوماتيك مع كل طلب ويتوقف البيع لما توصل صفر. اتركها فاضية إذا الكمية غير محدودة (مناسب أكثر للمنتجات المصنّعة حسب الطلب).
+                                    📦 الكمية المتوفرة تُدار من صفحة <a href="/admin/inventory" className="text-gold hover:underline font-bold">المخزن</a>.
                                 </p>
 
                                 {HAS_SHAPE_TYPES.includes(data.pricing_type) && (
@@ -465,6 +511,13 @@ export default function ProductEdit({ product, categories }) {
                                         value={data.preset_sizes}
                                         onChange={e => setData('preset_sizes', e.target.value)}
                                         placeholder="60,70,80,100" />
+                                )}
+
+                                {data.pricing_type === 'fixed_qty' && (
+                                    <Input label="الأحجام المتاحة (افصل بفاصلة — اختياري، كلها بنفس السعر)"
+                                        value={data.fixed_size_label}
+                                        onChange={e => setData('fixed_size_label', e.target.value)}
+                                        placeholder="50×11 سم, 60×13 سم, 70×15 سم" />
                                 )}
 
                                 {data.pricing_type === 'fixed_per_size' && (
@@ -496,6 +549,7 @@ export default function ProductEdit({ product, categories }) {
                                     </Field>
                                 )}
                             </div>
+                            )}
 
                             {/* الإعدادات */}
                             <div className="bg-white rounded-2xl border border-cream-3 p-4 space-y-3">
@@ -532,7 +586,149 @@ export default function ProductEdit({ product, categories }) {
                     </div>
                 </form>
 
+                {!isNew && <SpecFieldsSection product={product} specFields={specFields} specTemplates={specTemplates} />}
+
             </AdminLayout>
         </>
+    );
+}
+
+const SPEC_FIELD_TYPES = [
+    { value: 'text', label: 'نص' },
+    { value: 'number', label: 'رقم' },
+    { value: 'select', label: 'قائمة اختيار' },
+    { value: 'boolean', label: 'نعم / لا' },
+];
+
+/**
+ * Custom spec fields the customer fills in when ordering this product
+ * (e.g. width, lighting type) — purely informational for the workshop,
+ * never affects price. Usually seeded by applying a reusable template,
+ * then edited independently per product from here.
+ */
+function SpecFieldsSection({ product, specFields, specTemplates }) {
+    const [templateId, setTemplateId] = useState('');
+    const [addingField, setAddingField] = useState(false);
+    const [editingField, setEditingField] = useState(null);
+
+    function applyTemplate() {
+        if (!templateId) return;
+        router.post(route('admin.products.specFields.applyTemplate', product.id), { spec_template_id: templateId }, {
+            onSuccess: () => setTemplateId(''),
+        });
+    }
+
+    function deleteField(field) {
+        if (!confirm(`حذف حقل "${field.label}"؟`)) return;
+        router.delete(route('admin.products.specFields.destroy', [product.id, field.id]));
+    }
+
+    return (
+        <div className="max-w-3xl mt-6">
+            <div className="bg-white rounded-2xl border border-cream-3 p-5">
+                <p className="font-black text-ink mb-1">🧩 مواصفات مخصصة</p>
+                <p className="text-xs text-muted mb-4">
+                    حقول يعبيها الزبون وقت الطلب (معلوماتية للمشغل، ما بتأثر على السعر).
+                </p>
+
+                {specTemplates?.length > 0 && (
+                    <div className="flex items-end gap-2 mb-4 pb-4 border-b border-cream-3">
+                        <div className="flex-1">
+                            <label className="text-xs font-bold tracking-widest uppercase text-muted block mb-1">تطبيق قالب جاهز</label>
+                            <select value={templateId} onChange={e => setTemplateId(e.target.value)}
+                                className="w-full px-3 py-2 border-2 border-cream-3 focus:border-gold rounded-lg text-sm text-ink bg-cream outline-none">
+                                <option value="">— اختر قالب —</option>
+                                {specTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                            </select>
+                        </div>
+                        <button type="button" onClick={applyTemplate} disabled={!templateId}
+                            className="bg-cream-2 border border-cream-3 text-ink text-sm font-bold px-4 py-2 rounded-lg hover:bg-gold-pale hover:border-gold hover:text-gold transition-colors disabled:opacity-40">
+                            تطبيق
+                        </button>
+                    </div>
+                )}
+
+                <div className="space-y-2 mb-3">
+                    {specFields?.map(field => (
+                        <div key={field.id} className="flex items-center justify-between bg-cream rounded-xl px-3.5 py-2.5">
+                            <div>
+                                <span className="text-sm font-bold text-ink">{field.label}</span>
+                                <span className="text-xs text-muted mr-2">
+                                    {SPEC_FIELD_TYPES.find(t => t.value === field.field_type)?.label}
+                                    {field.field_type === 'select' && field.options?.length ? ` — ${field.options.join('، ')}` : ''}
+                                </span>
+                            </div>
+                            <div className="flex gap-1.5">
+                                <button onClick={() => setEditingField(field)} className="text-xs text-muted hover:text-gold font-bold">✏️</button>
+                                <button onClick={() => deleteField(field)} className="text-xs text-gray-400 hover:text-red-500 font-bold">🗑️</button>
+                            </div>
+                        </div>
+                    ))}
+                    {(!specFields || specFields.length === 0) && (
+                        <p className="text-xs text-muted text-center py-6">ما في مواصفات لهاد المنتج بعد</p>
+                    )}
+                </div>
+
+                {addingField || editingField ? (
+                    <SpecFieldForm product={product} field={editingField}
+                        onDone={() => { setAddingField(false); setEditingField(null); }} />
+                ) : (
+                    <button type="button" onClick={() => setAddingField(true)}
+                        className="text-sm font-bold text-gold hover:text-ink transition-colors">+ إضافة حقل يدوياً</button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function SpecFieldForm({ product, field, onDone }) {
+    const isEdit = !!field;
+    const { data, setData, post, put, processing, errors, reset, transform } = useForm({
+        label: field?.label || '',
+        field_type: field?.field_type || 'text',
+        options: (field?.options || []).join(', '),
+        is_required: field?.is_required || false,
+    });
+
+    transform(d => ({
+        ...d,
+        options: d.field_type === 'select'
+            ? d.options.split(',').map(s => s.trim()).filter(Boolean)
+            : null,
+    }));
+
+    function submit(e) {
+        e.preventDefault();
+        if (isEdit) {
+            put(route('admin.products.specFields.update', [product.id, field.id]), { onSuccess: () => { onDone(); reset(); } });
+        } else {
+            post(route('admin.products.specFields.store', product.id), { onSuccess: () => { onDone(); reset(); } });
+        }
+    }
+
+    return (
+        <form onSubmit={submit} className="bg-cream rounded-xl p-3.5 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+                <Input label="اسم الحقل" value={data.label} onChange={e => setData('label', e.target.value)}
+                    error={errors.label} placeholder="مثلاً: نوع الإضاءة" />
+                <Select label="نوع الحقل" value={data.field_type} onChange={e => setData('field_type', e.target.value)}>
+                    {SPEC_FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </Select>
+            </div>
+            {data.field_type === 'select' && (
+                <Input label="الخيارات (افصل بفاصلة)" value={data.options} onChange={e => setData('options', e.target.value)}
+                    error={errors.options} placeholder="أبيض, أصفر دافئ, RGB متعدد" />
+            )}
+            <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={data.is_required} onChange={e => setData('is_required', e.target.checked)} className="accent-gold" />
+                <span className="text-xs font-bold text-muted">إلزامي</span>
+            </label>
+            <div className="flex gap-2">
+                <button type="button" onClick={onDone} className="bg-white text-ink border border-cream-3 px-4 py-2 rounded-lg font-bold text-xs hover:bg-cream-2">إلغاء</button>
+                <button type="submit" disabled={processing} className="flex-1 bg-ink text-white py-2 rounded-lg font-black text-xs hover:bg-gold transition-colors disabled:opacity-60">
+                    {processing ? '⏳...' : '💾 حفظ الحقل'}
+                </button>
+            </div>
+        </form>
     );
 }

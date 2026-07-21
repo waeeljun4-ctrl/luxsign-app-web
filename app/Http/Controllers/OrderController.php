@@ -6,7 +6,9 @@ use App\Models\Coupon;
 use App\Models\CourierCompany;
 use App\Models\Order;
 use App\Models\Product;
+use App\Services\ImageCompressionService;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Validation\ValidationException;
@@ -19,6 +21,17 @@ class OrderController extends Controller
         return Inertia::render('Admin/Orders', [
             'orders' => Order::latest()->get(),
             'courierCompanies' => CourierCompany::where('is_active', true)->get(['id', 'name']),
+        ]);
+    }
+
+    /**
+     * A customer's own order history — scoped strictly to their own
+     * user_id, unlike index() above which is the admin-only full list.
+     */
+    public function mine(Request $request)
+    {
+        return Inertia::render('Account/Orders', [
+            'orders' => Order::where('user_id', $request->user()->id)->latest()->get(),
         ]);
     }
 
@@ -59,8 +72,15 @@ class OrderController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, ImageCompressionService $imageCompressor)
     {
+        // Images force a multipart request, so the cart's `items` (an array
+        // of objects) arrives JSON-encoded as a plain string alongside the
+        // files — decode it back into a real array before validating it.
+        if (is_string($request->input('items'))) {
+            $request->merge(['items' => json_decode($request->input('items'), true) ?? []]);
+        }
+
         $data = $request->validate([
             'customer_name'     => 'required|string|max:100',
             'customer_phone'    => 'required|string|max:20',
@@ -70,26 +90,57 @@ class OrderController extends Controller
             'items.*.price'     => 'required|numeric',
             'items.*.qty'       => 'required|integer|min:1',
             'items.*.product_id'=> 'nullable|integer|exists:products,id',
+            'items.*.is_custom' => 'nullable|boolean',
+            'items.*.specs'     => 'nullable|array',
+            'items.*.specs.*.label' => 'required_with:items.*.specs|string|max:100',
+            'items.*.specs.*.value' => 'nullable|string|max:255',
             'total'             => 'required|numeric',
             'notes'             => 'nullable|string|max:500',
             'coupon_code'       => 'nullable|string|max:40',
+            'item_images'       => 'nullable|array',
+            'item_images.*'     => 'image|max:8192',
         ]);
+
+        // Each cart item can carry its own reference photo, attached on the
+        // product page (before it ever reaches the cart) — correlated back
+        // to its item by array index, compressed/stored up front.
+        foreach ($request->file('item_images', []) as $index => $image) {
+            if ($image instanceof UploadedFile && isset($data['items'][$index])) {
+                $data['items'][$index]['image'] = $imageCompressor->compressAndStore($image, 'orders');
+            }
+        }
 
         try {
             $order = DB::transaction(function () use ($data, $request) {
-                // Stock check + decrement (only for items tied to a tracked product)
-                foreach ($data['items'] as $item) {
-                    if (empty($item['product_id'])) {
+                // Stock check + decrement (only for items tied to a tracked product),
+                // and enforce each product's minimum-price floor server-side so
+                // it can never be bypassed by tampering with the submitted price.
+                $priceFloorAdjustment = 0;
+
+                foreach ($data['items'] as &$item) {
+                    if (empty($item['product_id']) || ! empty($item['is_custom'])) {
                         continue;
                     }
                     $product = Product::lockForUpdate()->find($item['product_id']);
-                    if ($product && $product->track_stock) {
+                    if (! $product) {
+                        continue;
+                    }
+                    if ($product->track_stock) {
                         if ($product->stock_quantity < $item['qty']) {
                             throw ValidationException::withMessages(['items' => "الكمية غير متوفرة لمنتج \"{$product->name}\""]);
                         }
                         $product->decrement('stock_quantity', $item['qty']);
                     }
+
+                    $flooredPrice = $product->applyMinPrice($item['price']);
+                    if ($flooredPrice > $item['price']) {
+                        $priceFloorAdjustment += ($flooredPrice - $item['price']) * $item['qty'];
+                        $item['price'] = $flooredPrice;
+                    }
                 }
+                unset($item);
+
+                $data['total'] += $priceFloorAdjustment;
 
                 // User-level discount
                 $discount = optional($request->user())->discount_percentage ?? 0;

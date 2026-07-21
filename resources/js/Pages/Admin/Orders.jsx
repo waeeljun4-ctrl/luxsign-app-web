@@ -13,6 +13,14 @@ const STATUSES = [
     { value: 'cancelled',   label: 'ملغي' },
 ];
 
+function customQuoteWaLink(order, item) {
+    const specsLine = item.specs?.length > 0
+        ? item.specs.map(s => `${s.label}: ${s.value}`).join('\n')
+        : '';
+    const msg = `مرحبا ${order.customer_name} 👋\nبخصوص طلب "${item.name}" (طلبية #${order.id}) على متجر LuxSign:\n${specsLine ? specsLine + '\n' : ''}\nسعر طلبك: ___₪\nنتواصل لتأكيد التفاصيل 🙏`;
+    return `https://wa.me/${order.customer_phone}?text=${encodeURIComponent(msg)}`;
+}
+
 function OrderDetail({ order, open, onClose }) {
     const { data, setData, put, processing } = useForm({ status: order?.status || 'pending' });
 
@@ -47,9 +55,35 @@ function OrderDetail({ order, open, onClose }) {
                     <p className="text-xs font-bold tracking-widest uppercase text-muted mb-2">المنتجات</p>
                     <div className="space-y-1.5">
                         {order.items?.map((item, i) => (
-                            <div key={i} className="flex justify-between bg-cream rounded-lg px-3 py-2">
-                                <span className="text-sm font-bold">{item.name} <span className="text-muted font-normal">×{item.qty}</span></span>
-                                <span className="text-sm font-bold text-gold">{item.price * item.qty}₪</span>
+                            <div key={i} className={`rounded-lg px-3 py-2 ${item.is_custom ? 'bg-gold-pale border border-gold/30' : 'bg-cream'}`}>
+                                <div className="flex gap-2">
+                                    {item.image && (
+                                        <a href={`/storage/${item.image}`} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                                            <img src={`/storage/${item.image}`} className="w-11 h-11 object-cover rounded-lg border border-cream-3 hover:opacity-80 transition-opacity" />
+                                        </a>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between">
+                                            <span className="text-sm font-bold">{item.name} <span className="text-muted font-normal">×{item.qty}</span></span>
+                                            {item.is_custom ? (
+                                                <span className="text-xs font-bold text-gold shrink-0">🎨 تفصيل</span>
+                                            ) : (
+                                                <span className="text-sm font-bold text-gold">{item.price * item.qty}₪</span>
+                                            )}
+                                        </div>
+                                        {item.specs?.length > 0 && (
+                                            <p className="text-xs text-muted mt-1">
+                                                {item.specs.map(s => `${s.label}: ${s.value}`).join(' · ')}
+                                            </p>
+                                        )}
+                                        {item.is_custom && (
+                                            <a href={customQuoteWaLink(order, item)} target="_blank" rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1.5 mt-2 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-green-600 transition-colors">
+                                                📱 إرسال عرض سعر عبر واتساب
+                                            </a>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         ))}
                         <div className="flex justify-between px-3 pt-1 border-t border-cream-3">
@@ -217,6 +251,9 @@ export default function Orders({ orders, courierCompanies }) {
                                 <div className="flex items-center gap-2">
                                     <p className="font-bold text-sm text-ink">{order.customer_name}</p>
                                     <StatusBadge status={order.status} />
+                                    {order.items?.some(it => it.is_custom) && (
+                                        <span className="bg-gold-pale text-gold text-[10px] font-bold px-2 py-0.5 rounded-full">🎨 فيها تفصيل</span>
+                                    )}
                                     {order.sent_to_courier && (
                                         <span className="bg-blue-100 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full">📦 رُحّل لشركة التوصيل</span>
                                     )}

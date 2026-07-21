@@ -11,7 +11,7 @@ const BADGE_OPTIONS = [
     { value: 'عرض!',   label: '⚠️ عرض!' },
 ];
 
-const SIMPLE_TYPES = ['fixed', 'sqm', 'pair_width', 'single_width', 'plate_pair', 'plate_single'];
+const SIMPLE_TYPES = ['fixed', 'sqm', 'pair_width', 'single_width', 'plate_pair', 'plate_single', 'fixed_qty'];
 
 export default function Pricing({ products, categories }) {
     const [rows, setRows] = useState(() =>
@@ -52,6 +52,8 @@ export default function Pricing({ products, categories }) {
                 price: row.price,
                 compare_price: row.compare_price || null,
                 badge: row.badge || null,
+                min_price: row.min_price || null,
+                show_min_price: !!row.show_min_price,
             });
             setRows(prev => prev.map(r => r.id === id ? { ...r, _saving: false, _dirty: false, _saved: true } : r));
         } catch {
@@ -177,6 +179,7 @@ export default function Pricing({ products, categories }) {
                                     <th className="p-3 text-right min-w-[200px]">المنتج</th>
                                     <th className="p-3 w-32 text-right">السعر الحالي</th>
                                     <th className="p-3 w-32 text-right">سعر قديم (مشطوب)</th>
+                                    <th className="p-3 w-36 text-right">أقل سعر معروض</th>
                                     <th className="p-3 w-40 text-center">الشارة</th>
                                     <th className="p-3 w-10"></th>
                                 </tr>
@@ -216,6 +219,17 @@ export default function Pricing({ products, categories }) {
                                                             placeholder="السعر القديم"
                                                             className="border border-cream-3 focus:border-gold rounded-lg px-2 py-1.5 text-xs text-center text-muted bg-white outline-none w-28 placeholder-muted/40" />
                                                     </td>
+                                    <td className="p-3">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <input type="number" value={row.min_price ?? ''} onChange={e => patch(row.id, { min_price: e.target.value === '' ? null : parseFloat(e.target.value) })}
+                                                                placeholder="بدون"
+                                                                className="border border-cream-3 focus:border-gold rounded-lg px-2 py-1.5 text-xs text-center text-ink bg-white outline-none w-20 placeholder-muted/40" />
+                                                            <label title="فعّل الحد الأدنى" className="flex items-center">
+                                                                <input type="checkbox" checked={!!row.show_min_price} onChange={e => patch(row.id, { show_min_price: e.target.checked })}
+                                                                    className="accent-gold cursor-pointer" />
+                                                            </label>
+                                                        </div>
+                                                    </td>
                                                     <td className="p-3">
                                                         <select value={row.badge || ''} onChange={e => patch(row.id, { badge: e.target.value })}
                                                             className="w-full border border-cream-3 focus:border-gold rounded-lg px-2 py-1.5 text-xs text-ink bg-white outline-none">
@@ -234,7 +248,7 @@ export default function Pricing({ products, categories }) {
                                                     </td>
                                                 </>
                                             ) : (
-                                                <td colSpan={4} className="p-3 text-xs text-muted italic">
+                                                <td colSpan={5} className="p-3 text-xs text-muted italic">
                                                     عدّة مقاسات — عدّل الخصم من صفحة المنتج
                                                 </td>
                                             )}

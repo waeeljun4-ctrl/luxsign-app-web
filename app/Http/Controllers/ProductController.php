@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\SpecTemplate;
 use App\Services\ImageCompressionService;
 use App\Services\VideoCompressionService;
 use Illuminate\Http\Request;
@@ -43,6 +44,8 @@ class ProductController extends Controller
         return Inertia::render('Admin/ProductEdit', [
             'product'    => $product,
             'categories' => Category::active()->get(['id', 'name', 'icon']),
+            'specFields' => $product->specFields,
+            'specTemplates' => SpecTemplate::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -82,15 +85,18 @@ class ProductController extends Controller
             'video'          => 'nullable|mimetypes:video/mp4,video/quicktime,video/x-msvideo,video/webm|max:2097152',
             'video_url'      => 'nullable|max:500',
             'badge'          => 'nullable|string|max:30',
-            'pricing_type'   => 'required|in:fixed,sqm,plate_pair,plate_single,pair_width,single_width,plate_qty,fixed_per_size',
+            'pricing_type'   => 'required|in:fixed,sqm,plate_pair,plate_single,pair_width,single_width,plate_qty,fixed_per_size,fixed_qty',
+            'is_custom'      => 'boolean',
             'price'          => 'required|numeric|min:0',
-            'stock_quantity' => 'nullable|integer|min:0',
+            'min_price'      => 'nullable|numeric|min:0',
+            'show_min_price' => 'boolean',
             'preset_sizes'   => 'nullable',
             'size_prices'    => 'nullable',
             'compare_prices' => 'nullable',
             'qty_labels'     => 'nullable',
             'shape'          => 'nullable|in:rectangle,circle',
             'max_size'       => 'nullable|integer|min:0',
+            'fixed_size_label' => 'nullable|string|max:255',
             'designer_type'  => 'required|in:none,sign,plate',
             'is_active'      => 'boolean',
             'sort_order'     => 'integer',
@@ -108,8 +114,10 @@ class ProductController extends Controller
 
     public function store(Request $request, ImageCompressionService $imageCompressor, VideoCompressionService $videoCompressor)
     {
+        // track_stock/stock_quantity are managed exclusively from the
+        // Inventory page now — a new product just keeps the "unlimited
+        // stock" default (track_stock=false) until set there.
         $data = $this->parseArrayFields($request->validate($this->validateFields()));
-        $data['track_stock'] = $data['stock_quantity'] !== null;
 
         if ($request->hasFile('image')) {
             $data['image'] = $imageCompressor->compressAndStore($request->file('image'), 'products');
@@ -124,8 +132,9 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product, ImageCompressionService $imageCompressor, VideoCompressionService $videoCompressor)
     {
+        // track_stock/stock_quantity are managed exclusively from the
+        // Inventory page now — leave whatever is already set untouched.
         $data = $this->parseArrayFields($request->validate($this->validateFields()));
-        $data['track_stock'] = $data['stock_quantity'] !== null;
 
         if ($request->hasFile('image')) {
             if ($product->image) Storage::disk('public')->delete($product->image);

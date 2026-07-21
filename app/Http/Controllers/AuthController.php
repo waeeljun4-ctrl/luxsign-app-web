@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\LoginIdentifierService;
+use App\Services\PhoneNumberService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -43,26 +44,39 @@ class AuthController extends Controller
         return Inertia::render('Auth/Register');
     }
 
-    public function register(Request $request)
+    /**
+     * Customers sign up with just a phone number and password — no email,
+     * no OTP/verification step. Auth internally still runs on the `email`
+     * column (Auth::attempt, password_reset_tokens PK), so we store a
+     * synthetic unique email derived from the phone number; login already
+     * resolves phone -> stored email via LoginIdentifierService.
+     */
+    public function register(Request $request, PhoneNumberService $phoneNumbers)
     {
         $data = $request->validate([
             'name' => 'required|string|max:100',
-            'email' => 'required|email|max:255|unique:users,email',
+            'phone' => 'required|string|max:20',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
+        $phone = $phoneNumbers->normalize($data['phone']);
+
+        if (User::where('phone', $phone)->exists()) {
+            return back()->withErrors(['phone' => 'رقم الهاتف مستخدم مسبقاً.'])->withInput();
+        }
+
         $user = User::create([
             'name' => $data['name'],
-            'email' => $data['email'],
+            'phone' => $phone,
+            'email' => $phone.'@phone.luxsign.local',
+            'email_verified_at' => now(),
             'password' => Hash::make($data['password']),
             'role' => 'customer',
         ]);
 
-        $user->sendEmailVerificationNotification();
-
         Auth::login($user);
 
-        return redirect()->route('verification.notice');
+        return redirect()->route('home');
     }
 
     public function logout(Request $request)

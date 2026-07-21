@@ -4,6 +4,7 @@ import { Link, usePage, router } from '@inertiajs/react';
 const navItems = [
     { href: '/admin',              label: 'لوحة التحكم', icon: '📊' },
     { href: '/admin/products',     label: 'المنتجات',    icon: '📦' },
+    { href: '/admin/spec-templates', label: 'قوالب المواصفات', icon: '🧩' },
     { href: '/admin/categories',   label: 'الأصناف',     icon: '🗂️' },
     { href: '/admin/hero-slides',  label: 'السلايدر',    icon: '🎞️' },
     { href: '/admin/pricing',      label: 'التسعير',     icon: '💰' },

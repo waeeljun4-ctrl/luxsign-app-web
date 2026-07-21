@@ -6,7 +6,7 @@ import { useLocale } from './LocaleContext';
 import { Button, Toast } from './UI';
 
 export default function CartDrawer() {
-    const { items, removeItem, clear, total, count, open, setOpen } = useCart();
+    const { items, pricedItems, customItems, removeItem, clear, total, count, open, setOpen } = useCart();
     const { t } = useLocale();
     const { auth, siteSettings } = usePage().props;
     const [form, setForm] = useState({ name: '', phone: '', address: '', notes: '' });
@@ -74,15 +74,21 @@ export default function CartDrawer() {
         }
         setLoading(true);
         try {
-            await axios.post('/api/orders', {
-                customer_name: form.name,
-                customer_phone: form.phone,
-                address: form.address,
-                notes: form.notes,
-                items: items.map(i => ({ name: i.name, price: i.price, qty: i.qty, product_id: i.productId })),
-                total,
-                coupon_code: coupon?.code || null,
+            const payload = new FormData();
+            payload.append('customer_name', form.name);
+            payload.append('customer_phone', form.phone);
+            payload.append('address', form.address);
+            payload.append('notes', form.notes);
+            payload.append('items', JSON.stringify(items.map(i => ({ name: i.name, price: i.price ?? 0, qty: i.qty, product_id: i.productId, specs: i.specs || [], is_custom: !!i.isCustom }))));
+            payload.append('total', total);
+            if (coupon?.code) payload.append('coupon_code', coupon.code);
+            // Each cart item's own reference image (attached on the product page,
+            // not here) — correlated to its position in `items` above.
+            items.forEach((item, i) => {
+                if (item.image) payload.append(`item_images[${i}]`, item.image);
             });
+
+            await axios.post('/api/orders', payload, { headers: { 'Content-Type': 'multipart/form-data' } });
             showToast(t('successOrder'));
             clear();
             setOpen(false);
@@ -96,7 +102,9 @@ export default function CartDrawer() {
 
     function orderViaWA() {
         if (!items.length) return;
-        const lines = items.map(i => `- ${i.name} (${i.qty}x) = ${i.price * i.qty}₪`).join('\n');
+        const lines = items.map(i => i.isCustom
+            ? `- ${i.name} (${i.qty}x) = سيتم تحديد السعر`
+            : `- ${i.name} (${i.qty}x) = ${i.price * i.qty}₪`).join('\n');
         const nameLine  = form.name    ? t('waName')(form.name)       : '';
         const phoneLine = form.phone   ? t('waPhone')(form.phone)     : '';
         const addrLine  = form.address ? t('waAddress')(form.address) : '';
@@ -139,17 +147,56 @@ export default function CartDrawer() {
                             <div className="text-4xl mb-3">🛍️</div>
                             <p className="text-sm">{t('cartEmpty')}</p>
                         </div>
-                    ) : items.map((item, i) => (
-                        <div key={i} className="flex gap-3 py-3 border-b border-cream-3 dark:border-white/10 items-start">
-                            <div className="w-11 h-11 bg-cream-2 dark:bg-ink rounded-xl flex items-center justify-center text-xl shrink-0">{item.icon}</div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-ink dark:text-cream truncate">{item.name}</p>
-                                <p className="text-xs text-muted mt-0.5">{item.category} · {t('quantityLabel')}: {item.qty}</p>
-                                <p className="text-sm font-black text-gold mt-1">{item.price * item.qty}₪</p>
-                            </div>
-                            <button onClick={() => removeItem(item.name)} className="text-gray-300 hover:text-red-500 text-sm transition-colors">✕</button>
-                        </div>
-                    ))}
+                    ) : (
+                        <>
+                            {pricedItems.map((item, i) => (
+                                <div key={`p-${i}`} className="flex gap-3 py-3 border-b border-cream-3 dark:border-white/10 items-start">
+                                    {item.imagePreview ? (
+                                        <img src={item.imagePreview} className="w-11 h-11 rounded-xl object-cover shrink-0" />
+                                    ) : (
+                                        <div className="w-11 h-11 bg-cream-2 dark:bg-ink rounded-xl flex items-center justify-center text-xl shrink-0">{item.icon}</div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-ink dark:text-cream truncate">{item.name}</p>
+                                        <p className="text-xs text-muted mt-0.5">{item.category} · {t('quantityLabel')}: {item.qty}</p>
+                                        {item.specs?.length > 0 && (
+                                            <p className="text-[11px] text-muted/80 mt-0.5 truncate">
+                                                {item.specs.map(s => `${s.label}: ${s.value}`).join(' · ')}
+                                            </p>
+                                        )}
+                                        <p className="text-sm font-black text-gold mt-1">{item.price * item.qty}₪</p>
+                                    </div>
+                                    <button onClick={() => removeItem(item.name)} className="text-gray-300 hover:text-red-500 text-sm transition-colors">✕</button>
+                                </div>
+                            ))}
+
+                            {customItems.length > 0 && (
+                                <>
+                                    <p className="text-xs font-bold tracking-widest uppercase text-muted mt-3 mb-1">🎨 طلبات تفصيل — بانتظار التسعير</p>
+                                    {customItems.map((item, i) => (
+                                        <div key={`c-${i}`} className="flex gap-3 py-3 border-b border-cream-3 dark:border-white/10 items-start">
+                                            {item.imagePreview ? (
+                                                <img src={item.imagePreview} className="w-11 h-11 rounded-xl object-cover shrink-0" />
+                                            ) : (
+                                                <div className="w-11 h-11 bg-cream-2 dark:bg-ink rounded-xl flex items-center justify-center text-xl shrink-0">{item.icon}</div>
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-bold text-ink dark:text-cream truncate">{item.name}</p>
+                                                <p className="text-xs text-muted mt-0.5">{item.category} · {t('quantityLabel')}: {item.qty}</p>
+                                                {item.specs?.length > 0 && (
+                                                    <p className="text-[11px] text-muted/80 mt-0.5 truncate">
+                                                        {item.specs.map(s => `${s.label}: ${s.value}`).join(' · ')}
+                                                    </p>
+                                                )}
+                                                <p className="text-xs font-bold text-gold mt-1">💬 غير مسعّر بعد</p>
+                                            </div>
+                                            <button onClick={() => removeItem(item.name)} className="text-gray-300 hover:text-red-500 text-sm transition-colors">✕</button>
+                                        </div>
+                                    ))}
+                                </>
+                            )}
+                        </>
+                    )}
                 </div>
 
                 {/* Footer */}
@@ -212,6 +259,11 @@ export default function CartDrawer() {
                                 <span className="text-xl font-black text-ink dark:text-cream">{finalTotal}₪</span>
                             </div>
                         </div>
+                        {customItems.length > 0 && (
+                            <p className="text-[11px] text-muted -mt-1.5">
+                                + {customItems.length} منتج تفصيل رح نحدد سعره ونتواصل معك فيه بعد استلام طلبك
+                            </p>
+                        )}
 
                         <Button variant="dark" className="w-full py-3" onClick={confirmOrder} disabled={loading}>
                             {loading ? t('sending') : t('confirmOrder')}

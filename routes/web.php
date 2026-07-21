@@ -16,7 +16,9 @@ use App\Http\Controllers\Admin\CourierCompanyController;
 use App\Http\Controllers\Admin\DiscountCampaignController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\PricingController;
+use App\Http\Controllers\Admin\ProductSpecFieldController;
 use App\Http\Controllers\Admin\SiteSettingController;
+use App\Http\Controllers\Admin\SpecTemplateController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
@@ -51,6 +53,10 @@ Route::middleware('auth')->group(function () {
         $request->user()->sendEmailVerificationNotification();
         return back()->with('success', 'تم إرسال رابط التفعيل من جديد');
     })->middleware('throttle:6,1')->name('verification.send');
+
+    // Customer's own order history — deliberately NOT under /admin, scoped
+    // to the logged-in user only (see OrderController::mine()).
+    Route::get('/my-orders', [OrderController::class, 'mine'])->name('orders.mine');
 });
 
 // ── ADMIN (protected) ──
@@ -67,6 +73,20 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/products/{product}',          [ProductController::class, 'destroy'])      ->name('products.destroy');
     Route::delete('/products/{product}/image',    [ProductController::class, 'destroyImage']) ->name('products.destroyImage');
     Route::delete('/products/{product}/video',    [ProductController::class, 'destroyVideo']) ->name('products.destroyVideo');
+
+    // Spec templates (reusable, copy-on-attach custom fields per product)
+    Route::get('/spec-templates',                              [SpecTemplateController::class, 'index'])       ->name('specTemplates.index');
+    Route::post('/spec-templates',                              [SpecTemplateController::class, 'store'])       ->name('specTemplates.store');
+    Route::delete('/spec-templates/{specTemplate}',             [SpecTemplateController::class, 'destroy'])     ->name('specTemplates.destroy');
+    Route::post('/spec-templates/{specTemplate}/fields',        [SpecTemplateController::class, 'storeField'])  ->name('specTemplates.fields.store');
+    Route::put('/spec-templates/{specTemplate}/fields/{field}', [SpecTemplateController::class, 'updateField']) ->name('specTemplates.fields.update');
+    Route::delete('/spec-templates/{specTemplate}/fields/{field}', [SpecTemplateController::class, 'destroyField'])->name('specTemplates.fields.destroy');
+
+    // A product's own spec fields (usually seeded from a template, then independent)
+    Route::post('/products/{product}/spec-fields/apply-template', [ProductSpecFieldController::class, 'applyTemplate'])->name('products.specFields.applyTemplate');
+    Route::post('/products/{product}/spec-fields',                [ProductSpecFieldController::class, 'store'])        ->name('products.specFields.store');
+    Route::put('/products/{product}/spec-fields/{specField}',     [ProductSpecFieldController::class, 'update'])       ->name('products.specFields.update');
+    Route::delete('/products/{product}/spec-fields/{specField}',  [ProductSpecFieldController::class, 'destroy'])      ->name('products.specFields.destroy');
 
     // Categories
     Route::get('/categories',                      [CategoryController::class, 'index'])       ->name('categories.index');

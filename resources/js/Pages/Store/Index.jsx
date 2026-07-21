@@ -67,6 +67,10 @@ function AccountLink() {
                         <div className="px-3.5 py-2.5 border-b border-cream-3 dark:border-white/10">
                             <p className="text-sm font-bold text-ink dark:text-cream truncate">{user.name}</p>
                         </div>
+                        <Link href="/my-orders"
+                            className="block w-full text-right px-3.5 py-2.5 text-sm font-bold text-ink dark:text-cream hover:bg-cream-2 dark:hover:bg-ink transition-colors border-b border-cream-3 dark:border-white/10">
+                            📦 طلبياتي
+                        </Link>
                         <Link href="/logout" method="post" as="button"
                             className="w-full text-right px-3.5 py-2.5 text-sm font-bold text-red-500 hover:bg-cream-2 dark:hover:bg-ink transition-colors">
                             🚪 تسجيل الخروج
@@ -177,7 +181,6 @@ function HeroSlider({ slides }) {
 
 // ── Product Card ──
 function ProductCard({ product, onOpen }) {
-    const { addItem } = useCart();
     const { locale, t } = useLocale();
     const videoRef = useRef(null);
     const [hovering, setHovering] = useState(false);
@@ -187,17 +190,23 @@ function ProductCard({ product, onOpen }) {
     const categoryName = localField(product.category, 'name', locale);
 
     function getStartingPrice() {
-        if (product.pricing_type === 'sqm') {
-            const min = (product.preset_sizes?.[0] || 60) / 100;
-            return Math.max(150, Math.round(min * min * product.price));
-        }
-        if (product.pricing_type === 'fixed_per_size' && product.size_prices?.length) {
-            return Math.min(...product.size_prices);
-        }
-        if (product.pricing_type === 'plate_qty' && product.preset_sizes?.length) {
-            return Math.min(...product.preset_sizes);
-        }
-        return product.price;
+        const price = (() => {
+            if (product.pricing_type === 'sqm') {
+                const min = (product.preset_sizes?.[0] || 60) / 100;
+                return Math.max(150, Math.round(min * min * product.price));
+            }
+            if (product.pricing_type === 'fixed_per_size' && product.size_prices?.length) {
+                return Math.min(...product.size_prices);
+            }
+            if (product.pricing_type === 'plate_qty' && product.preset_sizes?.length) {
+                return Math.min(...product.preset_sizes);
+            }
+            return product.price;
+        })();
+
+        return product.show_min_price && product.min_price != null
+            ? Math.max(price, product.min_price)
+            : price;
     }
 
     const discount = product.compare_price && product.compare_price > product.price
@@ -267,7 +276,7 @@ function ProductCard({ product, onOpen }) {
                 <p className="text-xs font-bold tracking-widest uppercase text-gold mb-1">{categoryName}</p>
                 <p className="text-sm font-extrabold text-ink dark:text-cream mb-1 leading-tight">{name}</p>
                 <p className="text-xs text-muted leading-relaxed mb-3">{description}</p>
-                <div className="flex items-center justify-between">
+                {!product.is_custom && (
                     <div>
                         <p className="text-xs text-muted">{t('startingFrom')}</p>
                         <div className="flex items-center gap-1.5">
@@ -276,12 +285,7 @@ function ProductCard({ product, onOpen }) {
                         </div>
                         {lowStock && <p className="text-[11px] font-bold text-orange-500 mt-0.5">باقي {product.stock_quantity} فقط!</p>}
                     </div>
-                    <button onClick={e => { e.stopPropagation(); addItem(name, product.icon||'📦', getStartingPrice(), categoryName, product.id); }}
-                        disabled={soldOut}
-                        className="bg-ink text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-gold transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                        {soldOut ? 'نفذت الكمية' : t('addToCartShort')}
-                    </button>
-                </div>
+                )}
             </div>
         </div>
     );

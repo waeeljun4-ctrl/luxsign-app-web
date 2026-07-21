@@ -4,7 +4,7 @@ import { Head, useForm } from '@inertiajs/react';
 export default function Register() {
     const { data, setData, post, processing, errors } = useForm({
         name: '',
-        email: '',
+        phone: '',
         password: '',
         password_confirmation: '',
     });
@@ -44,17 +44,18 @@ export default function Register() {
                         </div>
 
                         <div>
-                            <label className="text-xs font-bold tracking-widest uppercase text-muted block mb-1.5">البريد الإلكتروني</label>
+                            <label className="text-xs font-bold tracking-widest uppercase text-muted block mb-1.5">رقم الهاتف</label>
                             <input
-                                type="email"
-                                value={data.email}
-                                onChange={e => setData('email', e.target.value)}
+                                type="tel"
+                                value={data.phone}
+                                onChange={e => setData('phone', e.target.value)}
                                 className={`w-full px-4 py-3 border-2 rounded-xl text-sm text-ink bg-cream outline-none transition-colors font-cairo
-                                    ${errors.email ? 'border-red-400' : 'border-cream-3 focus:border-gold'}`}
-                                placeholder="you@example.com"
-                                autoComplete="username"
+                                    ${errors.phone ? 'border-red-400' : 'border-cream-3 focus:border-gold'}`}
+                                placeholder="05xxxxxxxx"
+                                autoComplete="tel"
+                                dir="ltr"
                             />
-                            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+                            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                         </div>
 
                         <div>

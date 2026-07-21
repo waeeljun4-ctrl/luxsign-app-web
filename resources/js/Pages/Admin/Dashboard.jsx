@@ -2,15 +2,15 @@ import { Head, Link } from '@inertiajs/react';
 import AdminLayout from '../../Layouts/AdminLayout';
 import { StatusBadge } from '../../Components/UI';
 
-function StatCard({ label, value, color, bg, icon }) {
+function StatCard({ label, value, color, bg, icon, href }) {
     return (
-        <div className={`${bg} rounded-2xl p-5 flex flex-col gap-2`}>
+        <Link href={href} className={`${bg} rounded-2xl p-5 flex flex-col gap-2 transition-transform hover:-translate-y-0.5 cursor-pointer`}>
             <div className="flex items-center justify-between">
                 <span className="text-2xl">{icon}</span>
             </div>
             <p className={`text-3xl font-black ${color}`}>{value}</p>
             <p className="text-xs text-muted font-bold tracking-widest uppercase">{label}</p>
-        </div>
+        </Link>
     );
 }
 
@@ -25,19 +25,19 @@ export default function Dashboard({ stats, recent_orders, top_products }) {
                     <StatCard
                         icon="🆕" label="طلبات جديدة"
                         value={stats.pending}
-                        color="text-yellow-700" bg="bg-yellow-50" />
+                        color="text-yellow-700" bg="bg-yellow-50" href="/admin/orders" />
                     <StatCard
                         icon="⚙️" label="قيد التنفيذ"
                         value={stats.in_progress}
-                        color="text-purple-700" bg="bg-purple-50" />
+                        color="text-purple-700" bg="bg-purple-50" href="/admin/orders" />
                     <StatCard
                         icon="✅" label="تم التسليم"
                         value={stats.delivered}
-                        color="text-green-700" bg="bg-green-50" />
+                        color="text-green-700" bg="bg-green-50" href="/admin/orders" />
                     <StatCard
                         icon="💰" label="مبيعات اليوم"
                         value={`${stats.today_total}₪`}
-                        color="text-gold" bg="bg-gold-pale" />
+                        color="text-gold" bg="bg-gold-pale" href="/admin/orders" />
                 </div>
 
                 <div className="grid lg:grid-cols-2 gap-6">

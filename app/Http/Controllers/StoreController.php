@@ -26,14 +26,14 @@ class StoreController extends Controller
         $categories = Category::active()->get(['id', 'parent_id', 'name', 'name_he', 'name_en', 'icon', 'image', 'key']);
 
         $products = Product::active()
-            ->with('category:id,parent_id,name,name_he,name_en,icon,key')
+            ->with(['category:id,parent_id,name,name_he,name_en,icon,key', 'specFields'])
             ->get([
                 'id', 'category_id',
                 'name', 'name_he', 'name_en',
                 'description', 'description_he', 'description_en',
                 'icon', 'image', 'video', 'video_url', 'badge',
-                'pricing_type', 'price', 'compare_price', 'preset_sizes',
-                'size_prices', 'compare_prices', 'qty_labels', 'max_size', 'shape',
+                'pricing_type', 'is_custom', 'price', 'compare_price', 'min_price', 'show_min_price', 'preset_sizes',
+                'size_prices', 'compare_prices', 'qty_labels', 'max_size', 'fixed_size_label', 'shape',
                 'designer_type', 'track_stock', 'stock_quantity',
             ]);
 
