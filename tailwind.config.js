@@ -11,21 +11,21 @@ export default {
         extend: {
             colors: {
                 gold: {
-                    DEFAULT: '#C09A3A',
-                    light:   '#D4AF5A',
-                    pale:    '#FEF8E8',
-                    dark:    '#8B6914',
+                    DEFAULT: '#34455E',
+                    light:   '#5C7290',
+                    pale:    '#EEF2F6',
+                    dark:    '#1F2A3A',
                 },
                 ink: {
-                    DEFAULT: '#1a1814',
-                    2:       '#2e2b25',
+                    DEFAULT: '#1B2431',
+                    2:       '#29344A',
                 },
                 cream: {
                     DEFAULT: '#F8F6F1',
                     2:       '#F0EDE6',
                     3:       '#E8E3D8',
                 },
-                muted: '#8a7a6a',
+                muted: '#6B7686',
             },
             fontFamily: {
                 cairo: ['Cairo', 'sans-serif'],

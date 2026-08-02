@@ -4,7 +4,7 @@
 
 @layer base {
   html { font-family: 'Cairo', sans-serif; }
-  body { background: #F8F6F1; color: #1a1814; }
+  body { background: #F8F6F1; color: #1B2431; }
 }
 
 @layer utilities {
@@ -12,5 +12,22 @@
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 }
 
+/* Neutralizes whatever color a real uploaded photo carries (product/category
+   shots were shot warm/gold) and re-tints it in the site's navy accent, so
+   old photos read as on-theme without touching the files themselves. */
+@layer components {
+  .tint-navy { position: relative; isolation: isolate; }
+  .tint-navy > img { filter: grayscale(1) contrast(1.08) brightness(1.05); }
+  .tint-navy::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: theme('colors.gold.DEFAULT');
+    mix-blend-mode: color;
+    opacity: .65;
+    pointer-events: none;
+  }
+}
+
 /* Inertia progress bar */
-#nprogress .bar { background: #C09A3A !important; }
+#nprogress .bar { background: #34455E !important; }

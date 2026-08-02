@@ -120,8 +120,8 @@ function LangPicker() {
 // ── Hero Slider ──
 const HERO_GRADIENTS = [
     'from-ink via-ink-2 to-ink',
-    'from-gold via-[#a3812e] to-ink-2',
-    'from-ink-2 via-ink to-[#8a6b26]',
+    'from-gold via-[#3E4F6B] to-ink-2',
+    'from-ink-2 via-ink to-[#26344A]',
 ];
 
 function HeroSlider({ slides }) {
@@ -148,7 +148,7 @@ function HeroSlider({ slides }) {
                     const ctaText = localField(s, 'cta_text', locale);
                     return (
                         <div key={s.id} dir={dict.dir}
-                            style={s.image ? { backgroundImage: `linear-gradient(to bottom right, rgba(26,24,20,.75), rgba(26,24,20,.55)), url(/storage/${s.image})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                            style={s.image ? { backgroundImage: `linear-gradient(to bottom right, rgba(27,36,49,.8), rgba(27,36,49,.6)), url(/storage/${s.image})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
                             className={`w-full shrink-0 px-6 py-16 sm:py-24 text-center ${s.image ? '' : `bg-gradient-to-br ${HERO_GRADIENTS[i % HERO_GRADIENTS.length]}`}`}>
                             <h2 className="text-2xl sm:text-4xl font-black text-white mb-3">{title}</h2>
                             {subtitle && <p className="text-sm sm:text-base text-white/70 max-w-md mx-auto mb-6 leading-relaxed">{subtitle}</p>}
@@ -239,7 +239,11 @@ function ProductCard({ product, onOpen }) {
             {/* Image / Video */}
             <div className="h-40 bg-gradient-to-br from-cream-2 to-cream-3 dark:from-ink dark:to-ink-2 flex items-center justify-center text-4xl relative overflow-hidden">
                 {product.image
-                    ? <img src={`/storage/${product.image}`} alt={name} className={`w-full h-full object-cover ${soldOut ? 'grayscale opacity-50' : ''}`} />
+                    ? (
+                        <div className="tint-navy w-full h-full">
+                            <img src={`/storage/${product.image}`} alt={name} className={`w-full h-full object-cover ${soldOut ? 'opacity-50' : ''}`} />
+                        </div>
+                    )
                     : (product.icon || '📦')
                 }
                 {soldOut && (
@@ -423,7 +427,11 @@ function StoreContent({ heroSlides, categories, products }) {
                                     className="shrink-0 flex flex-col items-center gap-2 w-24 group snap-start">
                                     <div className={`relative w-24 h-24 rounded-2xl overflow-hidden flex items-center justify-center text-3xl transition-all duration-300 border-2 ${active ? 'border-gold shadow-lg shadow-gold/20 scale-105' : 'border-cream-3 dark:border-white/10 group-hover:border-gold-light'} ${cat.image ? '' : 'bg-gradient-to-br from-cream-2 to-cream-3 dark:from-ink-2 dark:to-ink'}`}>
                                         {cat.image
-                                            ? <img src={`/storage/${cat.image}`} alt={name} className="w-full h-full object-cover" />
+                                            ? (
+                                                <div className="tint-navy w-full h-full">
+                                                    <img src={`/storage/${cat.image}`} alt={name} className="w-full h-full object-cover" />
+                                                </div>
+                                            )
                                             : (cat.icon || '📦')
                                         }
                                         {kidsCount > 0 && (
