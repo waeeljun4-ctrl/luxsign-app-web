@@ -109,6 +109,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // Orders
     Route::get('/orders',                 [OrderController::class, 'index'])         ->name('orders.index');
     Route::put('/orders/{order}',         [OrderController::class, 'update'])        ->name('orders.update');
+    Route::put('/orders/{order}/items/{index}', [OrderController::class, 'updateItem'])->name('orders.updateItem');
     Route::delete('/orders/{order}',      [OrderController::class, 'destroy'])       ->name('orders.destroy');
     Route::post('/orders/export-courier', [OrderController::class, 'exportCourier']) ->name('orders.exportCourier');
     Route::post('/orders/send-to-courier', [OrderController::class, 'sendToCourier']) ->name('orders.sendToCourier');

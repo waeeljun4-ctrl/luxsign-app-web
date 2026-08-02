@@ -241,6 +241,31 @@ class OrderController extends Controller
         return back()->with('success', 'تم تحديث حالة الطلب ✅');
     }
 
+    /**
+     * Lets the admin correct a custom-order item's entered details (name +
+     * specs) after talking to the customer — orders arrive with whatever
+     * the customer typed, which sometimes needs tidying up or filling in
+     * before it's ready to send to the workshop.
+     */
+    public function updateItem(Request $request, Order $order, int $index)
+    {
+        $items = $order->items ?? [];
+        abort_unless(array_key_exists($index, $items), 404);
+
+        $data = $request->validate([
+            'name' => 'required|string|max:200',
+            'specs' => 'nullable|array',
+            'specs.*.label' => 'required_with:specs|string|max:100',
+            'specs.*.value' => 'nullable|string|max:255',
+        ]);
+
+        $items[$index]['name'] = $data['name'];
+        $items[$index]['specs'] = $data['specs'] ?? [];
+        $order->update(['items' => $items]);
+
+        return back()->with('success', 'تم تحديث تفاصيل الطلب ✅');
+    }
+
     public function destroy(Order $order)
     {
         $order->delete();

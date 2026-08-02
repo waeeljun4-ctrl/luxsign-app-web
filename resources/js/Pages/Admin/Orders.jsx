@@ -14,20 +14,66 @@ const STATUSES = [
     { value: 'cancelled',   label: 'ملغي' },
 ];
 
-function customQuoteWaLink(order, item) {
-    const specsLine = item.specs?.length > 0
-        ? item.specs.map(s => `${s.label}: ${s.value}`).join('\n')
-        : '';
-    const msg = `مرحبا ${order.customer_name} 👋\nبخصوص طلب "${item.name}" (طلبية #${order.id}) على متجر LuxSign:\n${specsLine ? specsLine + '\n' : ''}\nسعر طلبك: ___₪\nنتواصل لتأكيد التفاصيل 🙏`;
+// One WhatsApp message covering the whole order — greeting + every item
+// with its specs and price (or "قيد التسعير" for custom items still
+// waiting on a quote) — so clicking the customer's number is enough to
+// start the conversation with everything they entered already in view.
+function orderWaLink(order) {
+    const lines = (order.items || []).map(item => {
+        const specsText = item.specs?.length
+            ? '\n   ' + item.specs.map(s => `${s.label}: ${s.value}`).join('، ')
+            : '';
+        const priceText = item.is_custom ? ' — قيد التسعير' : ` — ${item.price}₪ × ${item.qty}`;
+        return `• ${item.name}${priceText}${specsText}`;
+    }).join('\n');
+    const msg = `مرحبا ${order.customer_name} 👋\nمعك متجر LuxSign بخصوص طلبيتك #${order.id}:\n${lines}\n\nنتواصل معك لتأكيد التفاصيل 🙏`;
     return `https://wa.me/${order.customer_phone}?text=${encodeURIComponent(msg)}`;
 }
 
 function OrderDetail({ order, open, onClose }) {
     const { data, setData, put, processing } = useForm({ status: order?.status || 'pending' });
+    const [editingIndex, setEditingIndex] = useState(null);
+    const [editName, setEditName] = useState('');
+    const [editSpecs, setEditSpecs] = useState([]);
+    const [savingItem, setSavingItem] = useState(false);
 
     function updateStatus(e) {
         e.preventDefault();
         put(route('admin.orders.update', order.id), { onSuccess: onClose });
+    }
+
+    function startEdit(index, item) {
+        setEditingIndex(index);
+        setEditName(item.name);
+        setEditSpecs(item.specs?.length ? item.specs.map(s => ({ ...s })) : []);
+    }
+
+    function cancelEdit() {
+        setEditingIndex(null);
+    }
+
+    function addSpecRow() {
+        setEditSpecs(prev => [...prev, { label: '', value: '' }]);
+    }
+
+    function updateSpecRow(i, field, value) {
+        setEditSpecs(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
+    }
+
+    function removeSpecRow(i) {
+        setEditSpecs(prev => prev.filter((_, idx) => idx !== i));
+    }
+
+    function saveItem(index) {
+        setSavingItem(true);
+        router.put(route('admin.orders.updateItem', [order.id, index]), {
+            name: editName,
+            specs: editSpecs.filter(s => s.label.trim()),
+        }, {
+            preserveScroll: true,
+            onSuccess: () => { setEditingIndex(null); setSavingItem(false); },
+            onError: () => setSavingItem(false),
+        });
     }
 
     if (!order) return null;
@@ -40,7 +86,10 @@ function OrderDetail({ order, open, onClose }) {
                     <div className="flex justify-between"><span className="text-sm text-muted">الاسم</span><span className="font-bold text-sm">{order.customer_name}</span></div>
                     <div className="flex justify-between">
                         <span className="text-sm text-muted">الواتساب</span>
-                        <a href={`https://wa.me/${order.customer_phone}`} target="_blank" className="font-bold text-sm text-green-600 hover:underline">{order.customer_phone}</a>
+                        <a href={orderWaLink(order)} target="_blank" rel="noreferrer"
+                            className="font-bold text-sm text-green-600 hover:underline flex items-center gap-1">
+                            💬 {order.customer_phone}
+                        </a>
                     </div>
                     {order.address && (
                         <div className="flex justify-between">
@@ -68,24 +117,57 @@ function OrderDetail({ order, open, onClose }) {
                                         </div>
                                     )}
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between">
-                                            <span className="text-sm font-bold">{item.name} <span className="text-muted font-normal">×{item.qty}</span></span>
-                                            {item.is_custom ? (
-                                                <span className="text-xs font-bold text-gold shrink-0">🎨 تفصيل</span>
-                                            ) : (
-                                                <span className="text-sm font-bold text-gold">{item.price * item.qty}₪</span>
-                                            )}
-                                        </div>
-                                        {item.specs?.length > 0 && (
-                                            <p className="text-xs text-muted mt-1">
-                                                {item.specs.map(s => `${s.label}: ${s.value}`).join(' · ')}
-                                            </p>
-                                        )}
-                                        {item.is_custom && (
-                                            <a href={customQuoteWaLink(order, item)} target="_blank" rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1.5 mt-2 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-green-600 transition-colors">
-                                                📱 إرسال عرض سعر عبر واتساب
-                                            </a>
+                                        {editingIndex === i ? (
+                                            <div className="space-y-2">
+                                                <input value={editName} onChange={e => setEditName(e.target.value)}
+                                                    className="w-full px-2 py-1.5 border-2 border-cream-3 focus:border-gold rounded-lg text-sm font-bold text-ink bg-white outline-none" />
+                                                <div className="space-y-1.5">
+                                                    {editSpecs.map((s, si) => (
+                                                        <div key={si} className="flex gap-1.5">
+                                                            <input value={s.label} onChange={e => updateSpecRow(si, 'label', e.target.value)}
+                                                                placeholder="العنوان (مثلاً: المقاس)"
+                                                                className="flex-1 px-2 py-1 border border-cream-3 focus:border-gold rounded-md text-xs text-ink bg-white outline-none" />
+                                                            <input value={s.value} onChange={e => updateSpecRow(si, 'value', e.target.value)}
+                                                                placeholder="القيمة"
+                                                                className="flex-1 px-2 py-1 border border-cream-3 focus:border-gold rounded-md text-xs text-ink bg-white outline-none" />
+                                                            <button type="button" onClick={() => removeSpecRow(si)}
+                                                                className="text-red-400 hover:text-red-600 text-xs px-1 shrink-0">✕</button>
+                                                        </div>
+                                                    ))}
+                                                    <button type="button" onClick={addSpecRow}
+                                                        className="text-xs font-bold text-gold hover:text-gold-light">+ إضافة تفصيل</button>
+                                                </div>
+                                                <div className="flex gap-1.5 pt-1">
+                                                    <button type="button" onClick={cancelEdit}
+                                                        className="bg-cream-2 text-ink text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-cream-3 transition-colors">إلغاء</button>
+                                                    <button type="button" onClick={() => saveItem(i)} disabled={savingItem}
+                                                        className="bg-gold text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-ink transition-colors disabled:opacity-60">
+                                                        {savingItem ? '⏳...' : '💾 حفظ'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="flex justify-between">
+                                                    <span className="text-sm font-bold">{item.name} <span className="text-muted font-normal">×{item.qty}</span></span>
+                                                    {item.is_custom ? (
+                                                        <span className="text-xs font-bold text-gold shrink-0">🎨 تفصيل</span>
+                                                    ) : (
+                                                        <span className="text-sm font-bold text-gold">{item.price * item.qty}₪</span>
+                                                    )}
+                                                </div>
+                                                {item.specs?.length > 0 && (
+                                                    <p className="text-xs text-muted mt-1">
+                                                        {item.specs.map(s => `${s.label}: ${s.value}`).join(' · ')}
+                                                    </p>
+                                                )}
+                                                {item.is_custom && (
+                                                    <button type="button" onClick={() => startEdit(i, item)}
+                                                        className="inline-flex items-center gap-1.5 mt-2 bg-cream-2 border border-cream-3 text-ink text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-gold-pale hover:border-gold hover:text-gold transition-colors">
+                                                        ✏️ تعديل التفاصيل
+                                                    </button>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 </div>
@@ -128,7 +210,11 @@ function OrderDetail({ order, open, onClose }) {
 }
 
 export default function Orders({ orders, courierCompanies }) {
-    const [selected, setSelected] = useState(null);
+    // Holds the id, not the order object — so after an item edit reloads
+    // `orders` with fresh data, the open modal picks up the new values
+    // instead of showing the stale object it was first opened with.
+    const [selectedId, setSelectedId] = useState(null);
+    const selected = orders.find(o => o.id === selectedId) || null;
     const [checked, setChecked] = useState(new Set());
     const [exporting, setExporting] = useState(false);
     const [sending, setSending] = useState(false);
@@ -258,7 +344,7 @@ export default function Orders({ orders, courierCompanies }) {
                     ) : orders.map((order, i) => (
                         <div key={order.id}
                             className={`flex items-center gap-3 px-4 py-3.5 hover:bg-cream cursor-pointer transition-colors ${i < orders.length-1 ? 'border-b border-cream-3' : ''}`}
-                            onClick={() => setSelected(order)}>
+                            onClick={() => setSelectedId(order.id)}>
                             <input type="checkbox" checked={checked.has(order.id)} onClick={e => e.stopPropagation()}
                                 onChange={() => toggleCheck(order.id)} className="accent-gold w-4 h-4 cursor-pointer shrink-0" />
                             <div className="w-10 h-10 bg-cream-2 rounded-xl flex items-center justify-center font-black text-sm text-ink shrink-0">
@@ -291,7 +377,7 @@ export default function Orders({ orders, courierCompanies }) {
                     ))}
                 </div>
 
-                <OrderDetail order={selected} open={!!selected} onClose={() => setSelected(null)} />
+                <OrderDetail order={selected} open={!!selected} onClose={() => setSelectedId(null)} />
             </AdminLayout>
         </>
     );
