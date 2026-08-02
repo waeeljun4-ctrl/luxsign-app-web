@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AdminLayout from '../../Layouts/AdminLayout';
 import { Button, Modal, Input } from '../../Components/UI';
+import { useConfirm } from '../../Components/useConfirm';
 
 const FIELD_TYPES = [
     { value: 'text', label: 'نص' },
@@ -70,19 +71,21 @@ function TemplateCard({ template }) {
     const [expanded, setExpanded] = useState(false);
     const [fieldFormOpen, setFieldFormOpen] = useState(false);
     const [editField, setEditField] = useState(null);
+    const { confirmAction, dialog } = useConfirm();
 
     function deleteTemplate() {
-        if (!confirm(`حذف قالب "${template.name}"؟ (ما بيأثر على المنتجات يلي طبقته سابقاً)`)) return;
-        router.delete(route('admin.specTemplates.destroy', template.id));
+        confirmAction(`حذف قالب "${template.name}"؟ (ما بيأثر على المنتجات يلي طبقته سابقاً)`,
+            (cb) => router.delete(route('admin.specTemplates.destroy', template.id), cb));
     }
 
     function deleteField(field) {
-        if (!confirm(`حذف حقل "${field.label}"؟`)) return;
-        router.delete(route('admin.specTemplates.fields.destroy', [template.id, field.id]));
+        confirmAction(`حذف حقل "${field.label}"؟`,
+            (cb) => router.delete(route('admin.specTemplates.fields.destroy', [template.id, field.id]), cb));
     }
 
     return (
         <div className="bg-white rounded-2xl border border-cream-3 overflow-hidden">
+            {dialog}
             <div className="flex items-center justify-between px-4 py-3.5 cursor-pointer" onClick={() => setExpanded(e => !e)}>
                 <div>
                     <p className="font-bold text-sm text-ink">{template.name}</p>

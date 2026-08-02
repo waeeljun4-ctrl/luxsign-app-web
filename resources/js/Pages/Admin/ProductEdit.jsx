@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { Head, useForm, Link, router } from '@inertiajs/react';
 import AdminLayout from '../../Layouts/AdminLayout';
 import { RepeatingRows } from '../../Components/UI';
+import { useConfirm } from '../../Components/useConfirm';
 
 const PRICING_TYPES = [
     { value: 'fixed',          label: 'سعر ثابت' },
@@ -126,14 +127,20 @@ export default function ProductEdit({ product, categories, specFields, specTempl
         video_url:      product?.video_url ?? '',
     });
 
+    const { confirmAction, dialog } = useConfirm();
+
     const [sizeRows, setSizeRows] = useState(() => (
         product?.pricing_type === 'fixed_per_size' && product?.preset_sizes?.length
-            ? product.preset_sizes.map((s, i) => ({
-                size: s,
-                price: product.size_prices?.[i] ?? '',
-                comparePrice: product.compare_prices?.[i] ?? '',
-            }))
-            : [{ size: '', price: '', comparePrice: '' }]
+            ? product.preset_sizes.map((s, i) => {
+                const [length, width] = String(s).split(/[×x]/i);
+                return {
+                    length: length ?? '',
+                    width: width ?? '',
+                    price: product.size_prices?.[i] ?? '',
+                    comparePrice: product.compare_prices?.[i] ?? '',
+                };
+            })
+            : [{ length: '', width: '', price: '', comparePrice: '' }]
     ));
 
     const [qtyRows, setQtyRows] = useState(() => (
@@ -147,11 +154,11 @@ export default function ProductEdit({ product, categories, specFields, specTempl
 
     useEffect(() => {
         if (data.pricing_type !== 'fixed_per_size') return;
-        setData('preset_sizes', sizeRows.map(r => r.size));
+        setData('preset_sizes', sizeRows.map(r => (data.shape === 'circle' || !r.width) ? r.length : `${r.length}×${r.width}`));
         setData('size_prices', sizeRows.map(r => r.price));
         setData('compare_prices', sizeRows.map(r => r.comparePrice));
         setData('price', sizeRows[0]?.price || 0);
-    }, [sizeRows, data.pricing_type]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [sizeRows, data.pricing_type, data.shape]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (data.pricing_type !== 'plate_qty') return;
@@ -176,18 +183,22 @@ export default function ProductEdit({ product, categories, specFields, specTempl
     }
 
     function deleteImage() {
-        if (!confirm('حذف الصورة؟')) return;
-        setDeletingImg(true);
-        router.delete(route('admin.products.destroyImage', product.id), {
-            onFinish: () => setDeletingImg(false),
+        confirmAction('حذف الصورة؟', (cb) => {
+            setDeletingImg(true);
+            router.delete(route('admin.products.destroyImage', product.id), {
+                ...cb,
+                onFinish: () => { setDeletingImg(false); cb.onFinish(); },
+            });
         });
     }
 
     function deleteVideo() {
-        if (!confirm('حذف الفيديو؟')) return;
-        setDeletingVid(true);
-        router.delete(route('admin.products.destroyVideo', product.id), {
-            onFinish: () => setDeletingVid(false),
+        confirmAction('حذف الفيديو؟', (cb) => {
+            setDeletingVid(true);
+            router.delete(route('admin.products.destroyVideo', product.id), {
+                ...cb,
+                onFinish: () => { setDeletingVid(false); cb.onFinish(); },
+            });
         });
     }
 
@@ -221,6 +232,7 @@ export default function ProductEdit({ product, categories, specFields, specTempl
     return (
         <>
             <Head title={isNew ? 'إضافة منتج جديد' : `تعديل: ${product.name}`} />
+            {dialog}
             <AdminLayout title={isNew ? '➕ إضافة منتج' : `✏️ ${product.name}`}>
 
                 <form onSubmit={submit}>
@@ -522,12 +534,22 @@ export default function ProductEdit({ product, categories, specFields, specTempl
 
                                 {data.pricing_type === 'fixed_per_size' && (
                                     <Field label="الأحجام والأسعار الثابتة">
+                                        <p className="text-xs text-muted -mt-1 mb-1">
+                                            {data.shape === 'circle'
+                                                ? 'حدد القطر لكل حجم، وهيك رح يظهر للزبون.'
+                                                : 'حدد الطول والعرض لكل حجم، وهيك رح يظهروا للزبون (مثلاً 300×250) مش رقم واحد بس.'}
+                                        </p>
                                         <RepeatingRows
                                             rows={sizeRows}
                                             onChange={setSizeRows}
                                             addLabel="+ إضافة حجم"
-                                            columns={[
-                                                { key: 'size', placeholder: 'الحجم (سم)', type: 'number', width: 'w-24' },
+                                            columns={data.shape === 'circle' ? [
+                                                { key: 'length', placeholder: 'القطر (سم)', type: 'number', width: 'w-24' },
+                                                { key: 'price', placeholder: 'السعر (₪)', type: 'number' },
+                                                { key: 'comparePrice', placeholder: 'سعر قبل الخصم (اختياري)', type: 'number' },
+                                            ] : [
+                                                { key: 'length', placeholder: 'الطول (سم)', type: 'number', width: 'w-20' },
+                                                { key: 'width', placeholder: 'العرض (سم)', type: 'number', width: 'w-20' },
                                                 { key: 'price', placeholder: 'السعر (₪)', type: 'number' },
                                                 { key: 'comparePrice', placeholder: 'سعر قبل الخصم (اختياري)', type: 'number' },
                                             ]}
@@ -618,13 +640,16 @@ function SpecFieldsSection({ product, specFields, specTemplates }) {
         });
     }
 
+    const { confirmAction, dialog } = useConfirm();
+
     function deleteField(field) {
-        if (!confirm(`حذف حقل "${field.label}"؟`)) return;
-        router.delete(route('admin.products.specFields.destroy', [product.id, field.id]));
+        confirmAction(`حذف حقل "${field.label}"؟`,
+            (cb) => router.delete(route('admin.products.specFields.destroy', [product.id, field.id]), cb));
     }
 
     return (
         <div className="max-w-3xl mt-6">
+            {dialog}
             <div className="bg-white rounded-2xl border border-cream-3 p-5">
                 <p className="font-black text-ink mb-1">🧩 مواصفات مخصصة</p>
                 <p className="text-xs text-muted mb-4">

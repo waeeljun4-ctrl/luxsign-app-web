@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Head, useForm, router, Link } from '@inertiajs/react';
 import AdminLayout from '../../Layouts/AdminLayout';
+import { useConfirm } from '../../Components/useConfirm';
 
 function CouponForm({ users, onClose }) {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -79,6 +80,7 @@ function CouponForm({ users, onClose }) {
 
 function CouponRow({ coupon }) {
     const { delete: destroy, data, setData } = useForm({ is_active: coupon.is_active });
+    const { confirmAction, dialog } = useConfirm();
 
     function toggleActive() {
         const next = !data.is_active;
@@ -90,8 +92,8 @@ function CouponRow({ coupon }) {
     }
 
     function remove() {
-        if (!confirm(`حذف الكوبون "${coupon.code}"؟`)) return;
-        destroy(route('admin.coupons.destroy', coupon.id));
+        confirmAction(`حذف الكوبون "${coupon.code}"؟`,
+            (cb) => destroy(route('admin.coupons.destroy', coupon.id), cb));
     }
 
     const expired = coupon.expires_at && new Date(coupon.expires_at) < new Date();
@@ -99,6 +101,7 @@ function CouponRow({ coupon }) {
 
     return (
         <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-cream transition-colors">
+            {dialog}
             <div className="flex-1 min-w-0">
                 <p className="font-black text-sm text-ink tracking-wider flex items-center gap-2">
                     {coupon.is_hidden ? '🔒 كوبون خاص بدون كود' : coupon.code}

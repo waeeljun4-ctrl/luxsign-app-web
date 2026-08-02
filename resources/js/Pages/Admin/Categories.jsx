@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AdminLayout from '../../Layouts/AdminLayout';
-import { Button, Modal, Input } from '../../Components/UI';
+import { Button, Modal, Input, Toast } from '../../Components/UI';
+import { useConfirm } from '../../Components/useConfirm';
 
 function CatForm({ open, onClose, category, topLevelCategories }) {
     const isEdit = !!category;
@@ -20,6 +21,7 @@ function CatForm({ open, onClose, category, topLevelCategories }) {
     const [imgPreview, setImgPreview]     = useState(category?.image ? `/storage/${category.image}` : null);
     const [imgUploading, setImgUploading] = useState(false);
     const imgInput = useRef(null);
+    const { confirmAction: confirmImageDelete, dialog: imageDeleteDialog } = useConfirm();
 
     function submit(e) {
         e.preventDefault();
@@ -43,16 +45,18 @@ function CatForm({ open, onClose, category, topLevelCategories }) {
     }
 
     function deleteImage() {
-        if (!confirm('حذف صورة الصنف؟')) return;
-        router.delete(route('admin.categories.destroyImage', category.id), {
-            onSuccess: () => setImgPreview(null),
-        });
+        confirmImageDelete('حذف صورة الصنف؟', (cb) => router.delete(route('admin.categories.destroyImage', category.id), {
+            ...cb,
+            onSuccess: () => { setImgPreview(null); cb.onSuccess(); },
+        }));
     }
 
     // لا يمكن اختيار الصنف نفسه كأب له
     const parentOptions = topLevelCategories.filter(c => c.id !== category?.id);
 
     return (
+        <>
+        {imageDeleteDialog}
         <Modal open={open} onClose={onClose} title={isEdit ? 'تعديل الصنف' : 'إضافة صنف'} maxWidth="max-w-sm">
             <form onSubmit={submit} className="space-y-3">
                 <Input label="اسم الصنف" value={data.name} onChange={e=>setData('name',e.target.value)} error={errors.name} placeholder="قارمات مضيئة" />
@@ -121,6 +125,7 @@ function CatForm({ open, onClose, category, topLevelCategories }) {
                 </div>
             </form>
         </Modal>
+        </>
     );
 }
 
@@ -155,14 +160,21 @@ export default function Categories({ categories }) {
     const [formOpen, setFormOpen] = useState(false);
     const [editCat, setEditCat] = useState(null);
     const { delete: destroy } = useForm();
+    const { confirmAction, dialog } = useConfirm();
+    const [toast, setToast] = useState({ show: false, msg: '' });
+
+    function showToast(msg) {
+        setToast({ show: true, msg });
+        setTimeout(() => setToast({ show: false, msg: '' }), 3000);
+    }
 
     function handleDelete(cat) {
         if (cat.children?.length || categories.some(c => c.parent_id === cat.id)) {
-            alert('لا يمكن حذف صنف عنده أصناف فرعية — احذف الأصناف الفرعية أولاً');
+            showToast('لا يمكن حذف صنف عنده أصناف فرعية — احذف الأصناف الفرعية أولاً');
             return;
         }
-        if (!confirm(`حذف "${cat.name}"؟`)) return;
-        destroy(route('admin.categories.destroy', cat.id));
+        confirmAction(`حذف "${cat.name}"؟`,
+            (cb) => destroy(route('admin.categories.destroy', cat.id), cb));
     }
 
     const topLevel = categories.filter(c => !c.parent_id);
@@ -171,6 +183,8 @@ export default function Categories({ categories }) {
     return (
         <>
             <Head title="الأصناف — الإدارة" />
+            {dialog}
+            <Toast message={toast.msg} show={toast.show} />
             <AdminLayout title="🗂️ الأصناف">
                 <div className="flex justify-between items-center mb-5">
                     <p className="text-muted text-sm">{categories.length} صنف ({topLevel.length} رئيسي)</p>

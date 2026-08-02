@@ -51,19 +51,22 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
     const [selectedSize, setSelectedSize] = useState(product.preset_sizes?.[0] ?? null);
     const [specValues, setSpecValues] = useState({});
     const [specError, setSpecError] = useState('');
-    const [refImage, setRefImage] = useState(null);
-    const [refImagePreview, setRefImagePreview] = useState(null);
+    const MAX_REF_IMAGES = 10;
+    const [refImages, setRefImages] = useState([]);
+    const [refImagePreviews, setRefImagePreviews] = useState([]);
 
     function handleRefImageChange(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        setRefImage(file);
-        setRefImagePreview(URL.createObjectURL(file));
+        const files = Array.from(e.target.files || []);
+        e.target.value = ''; // allow picking the same file again later
+        if (!files.length) return;
+        const accepted = files.slice(0, MAX_REF_IMAGES - refImages.length);
+        setRefImages(prev => [...prev, ...accepted]);
+        setRefImagePreviews(prev => [...prev, ...accepted.map(f => URL.createObjectURL(f))]);
     }
 
-    function removeRefImage() {
-        setRefImage(null);
-        setRefImagePreview(null);
+    function removeRefImage(index) {
+        setRefImages(prev => prev.filter((_, i) => i !== index));
+        setRefImagePreviews(prev => prev.filter((_, i) => i !== index));
     }
 
     const specFields = product.spec_fields || [];
@@ -109,7 +112,7 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
 
         const specs = specFields.map(f => ({ label: f.label, value: specValues[f.id] ?? '' })).filter(s => s.value !== '');
 
-        addItem(name + size, product.icon || '📦', product.is_custom ? null : price, categoryName || '', product.id, specs, refImage, product.is_custom);
+        addItem(name + size, product.icon || '📦', product.is_custom ? null : price, categoryName || '', product.id, specs, refImages, product.is_custom);
         onClose();
     }
 
@@ -149,7 +152,11 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
                 ) : (
                     <div className="mx-4 mt-4 h-44 bg-gradient-to-br from-cream-2 to-cream-3 dark:from-ink dark:to-ink-2 rounded-xl overflow-hidden flex items-center justify-center text-5xl">
                         {product.image
-                            ? <img src={`/storage/${product.image}`} alt={name} className="w-full h-full object-cover" />
+                            ? (
+                                <div className="tint-navy w-full h-full">
+                                    <img src={`/storage/${product.image}`} alt={name} className="w-full h-full object-cover" />
+                                </div>
+                            )
                             : (product.icon || '📦')
                         }
                     </div>
@@ -321,21 +328,26 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
                         </div>
                     )}
 
-                    {/* Reference image to clarify what's wanted, attached to this item */}
+                    {/* Reference images to clarify what's wanted, attached to this item */}
                     <div>
-                        <label className="text-xs font-bold tracking-widest uppercase text-muted block mb-2">صورة توضيحية (اختياري)</label>
-                        {refImagePreview ? (
-                            <div className="relative w-16 h-16">
-                                <img src={refImagePreview} className="w-16 h-16 object-cover rounded-xl border border-cream-3 dark:border-white/10" />
-                                <button type="button" onClick={removeRefImage}
-                                    className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center leading-none">✕</button>
-                            </div>
-                        ) : (
-                            <label className="w-16 h-16 flex flex-col items-center justify-center gap-0.5 border-2 border-dashed border-cream-3 dark:border-white/10 rounded-xl cursor-pointer text-muted hover:border-gold hover:text-gold transition-colors">
-                                <span className="text-xl leading-none">📷</span>
-                                <input type="file" accept="image/*" className="hidden" onChange={handleRefImageChange} />
-                            </label>
-                        )}
+                        <label className="text-xs font-bold tracking-widest uppercase text-muted block mb-2">
+                            صورة توضيحية (اختياري) — حتى {MAX_REF_IMAGES} صور
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                            {refImagePreviews.map((src, i) => (
+                                <div key={i} className="relative w-16 h-16">
+                                    <img src={src} className="w-16 h-16 object-cover rounded-xl border border-cream-3 dark:border-white/10" />
+                                    <button type="button" onClick={() => removeRefImage(i)}
+                                        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center leading-none">✕</button>
+                                </div>
+                            ))}
+                            {refImages.length < MAX_REF_IMAGES && (
+                                <label className="w-16 h-16 flex flex-col items-center justify-center gap-0.5 border-2 border-dashed border-cream-3 dark:border-white/10 rounded-xl cursor-pointer text-muted hover:border-gold hover:text-gold transition-colors">
+                                    <span className="text-xl leading-none">📷</span>
+                                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleRefImageChange} />
+                                </label>
+                            )}
+                        </div>
                     </div>
 
                     {/* Live price — custom-order products have none */}

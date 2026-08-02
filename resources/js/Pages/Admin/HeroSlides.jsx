@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AdminLayout from '../../Layouts/AdminLayout';
 import { Button, Modal, Input, Textarea } from '../../Components/UI';
+import { useConfirm } from '../../Components/useConfirm';
 
 function SlideForm({ open, onClose, slide }) {
     const isEdit = !!slide;
@@ -23,6 +24,7 @@ function SlideForm({ open, onClose, slide }) {
     const [imgPreview, setImgPreview]     = useState(slide?.image ? `/storage/${slide.image}` : null);
     const [imgUploading, setImgUploading] = useState(false);
     const imgInput = useRef(null);
+    const { confirmAction: confirmImageDelete, dialog: imageDeleteDialog } = useConfirm();
 
     function submit(e) {
         e.preventDefault();
@@ -45,13 +47,15 @@ function SlideForm({ open, onClose, slide }) {
     }
 
     function deleteImage() {
-        if (!confirm('حذف صورة الشريحة؟')) return;
-        router.delete(route('admin.heroSlides.destroyImage', slide.id), {
-            onSuccess: () => setImgPreview(null),
-        });
+        confirmImageDelete('حذف صورة الشريحة؟', (cb) => router.delete(route('admin.heroSlides.destroyImage', slide.id), {
+            ...cb,
+            onSuccess: () => { setImgPreview(null); cb.onSuccess(); },
+        }));
     }
 
     return (
+        <>
+        {imageDeleteDialog}
         <Modal open={open} onClose={onClose} title={isEdit ? 'تعديل الشريحة' : 'إضافة شريحة'} maxWidth="max-w-md">
             <form onSubmit={submit} className="space-y-3">
                 <Input label="العنوان (عربي)" value={data.title} onChange={e=>setData('title',e.target.value)} error={errors.title} placeholder="قارمات مضيئة بتصميمك أنت" />
@@ -119,6 +123,7 @@ function SlideForm({ open, onClose, slide }) {
                 </div>
             </form>
         </Modal>
+        </>
     );
 }
 
@@ -126,15 +131,17 @@ export default function HeroSlides({ slides }) {
     const [formOpen, setFormOpen] = useState(false);
     const [editSlide, setEditSlide] = useState(null);
     const { delete: destroy } = useForm();
+    const { confirmAction, dialog } = useConfirm();
 
     function handleDelete(s) {
-        if (!confirm(`حذف شريحة "${s.title}"؟`)) return;
-        destroy(route('admin.heroSlides.destroy', s.id));
+        confirmAction(`حذف شريحة "${s.title}"؟`,
+            (cb) => destroy(route('admin.heroSlides.destroy', s.id), cb));
     }
 
     return (
         <>
             <Head title="السلايدر — الإدارة" />
+            {dialog}
             <AdminLayout title="🎞️ السلايدر (أعلى الصفحة)">
                 <div className="flex justify-between items-center mb-5">
                     <p className="text-muted text-sm">{slides.length} شريحة</p>

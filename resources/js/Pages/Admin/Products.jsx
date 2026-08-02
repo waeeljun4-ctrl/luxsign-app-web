@@ -1,18 +1,26 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Head, useForm, Link } from '@inertiajs/react';
 import AdminLayout from '../../Layouts/AdminLayout';
 import { Button, PricingLabel } from '../../Components/UI';
+import { useConfirm } from '../../Components/useConfirm';
 import axios from 'axios';
 
 export default function Products({ products, categories }) {
     const [list, setList] = useState(products);
     const { delete: destroy } = useForm();
+    const { confirmAction, dialog } = useConfirm();
     const dragItem = useRef(null);
     const dragOverItem = useRef(null);
 
+    // `list` only seeds from `products` on first render — without this,
+    // deleting/reordering leaves the old array in place until a full
+    // page reload re-mounts the component, even though Inertia already
+    // sent back fresh props.
+    useEffect(() => { setList(products); }, [products]);
+
     function handleDelete(product) {
-        if (!confirm(`هل تريد حذف "${product.name}"؟`)) return;
-        destroy(route('admin.products.destroy', product.id));
+        confirmAction(`هل تريد حذف "${product.name}"؟`,
+            (cb) => destroy(route('admin.products.destroy', product.id), cb));
     }
 
     function handleDragStart(index) { dragItem.current = index; }
@@ -29,6 +37,7 @@ export default function Products({ products, categories }) {
     return (
         <>
             <Head title="المنتجات — الإدارة" />
+            {dialog}
             <AdminLayout title="📦 المنتجات">
                 <div className="flex items-center justify-between mb-5">
                     <p className="text-muted text-sm">{list.length} منتج في المتجر — اسحب ⠿ لإعادة الترتيب</p>

@@ -15,6 +15,7 @@ const navItems = [
     { href: '/admin/orders',       label: 'الطلبات',     icon: '🛒' },
     { href: '/admin/archive',      label: 'الأرشيف',     icon: '🗄️' },
     { href: '/admin/users',        label: 'المستخدمون',  icon: '👥' },
+    { href: '/admin/admins',       label: 'المدراء',      icon: '🛡️' },
     { href: '/admin/settings',     label: 'التواصل الاجتماعي', icon: '📱' },
     { href: '/admin/profile',      label: 'الحساب',      icon: '⚙️' },
 ];

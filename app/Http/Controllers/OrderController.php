@@ -6,10 +6,13 @@ use App\Models\Coupon;
 use App\Models\CourierCompany;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\User;
 use App\Services\ImageCompressionService;
+use App\Services\PhoneNumberService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -72,7 +75,7 @@ class OrderController extends Controller
         ]);
     }
 
-    public function store(Request $request, ImageCompressionService $imageCompressor)
+    public function store(Request $request, ImageCompressionService $imageCompressor, PhoneNumberService $phoneNumbers)
     {
         // Images force a multipart request, so the cart's `items` (an array
         // of objects) arrives JSON-encoded as a plain string alongside the
@@ -98,20 +101,67 @@ class OrderController extends Controller
             'notes'             => 'nullable|string|max:500',
             'coupon_code'       => 'nullable|string|max:40',
             'item_images'       => 'nullable|array',
-            'item_images.*'     => 'image|max:8192',
+            'item_images.*'     => 'nullable|array|max:10',
+            'item_images.*.*'   => 'image|max:8192',
         ]);
 
-        // Each cart item can carry its own reference photo, attached on the
-        // product page (before it ever reaches the cart) — correlated back
+        // Each cart item can carry its own reference photos (up to 10), attached
+        // on the product page (before it ever reaches the cart) — correlated back
         // to its item by array index, compressed/stored up front.
-        foreach ($request->file('item_images', []) as $index => $image) {
-            if ($image instanceof UploadedFile && isset($data['items'][$index])) {
-                $data['items'][$index]['image'] = $imageCompressor->compressAndStore($image, 'orders');
+        foreach ($request->file('item_images', []) as $index => $images) {
+            if (! isset($data['items'][$index]) || ! is_array($images)) {
+                continue;
+            }
+            $paths = [];
+            foreach ($images as $image) {
+                if ($image instanceof UploadedFile) {
+                    $paths[] = $imageCompressor->compressAndStore($image, 'orders');
+                }
+            }
+            if ($paths) {
+                $data['items'][$index]['images'] = $paths;
             }
         }
 
+        $newAccount = false;
+
         try {
-            $order = DB::transaction(function () use ($data, $request) {
+            $order = DB::transaction(function () use ($data, $request, $phoneNumbers, &$newAccount) {
+                // Guests aren't required to log in to order — but every order
+                // carries a name + phone, so we quietly turn that into a real
+                // account (matched/locked by normalized phone) instead of
+                // leaving it a one-off record with no way back in. A brand
+                // new account gets the phone number itself as its password,
+                // since that's the only credential a guest ever typed in;
+                // the front end tells them so once (see $newAccount below).
+                //
+                // Attribution always follows the typed phone, never the
+                // active session by itself — on a shared browser/device, a
+                // stale login from a previous customer must never silently
+                // absorb someone else's order into the wrong account (that
+                // showed up as other people's orders leaking into "My
+                // Orders"). Only skip the lookup when the logged-in user's
+                // own phone matches what was typed, i.e. they're ordering
+                // for themselves.
+                $normalizedPhone = $phoneNumbers->normalize($data['customer_phone']);
+                $sessionUser = $request->user();
+                if ($sessionUser && $sessionUser->phone === $normalizedPhone) {
+                    $orderUser = $sessionUser;
+                } else {
+                    $orderUser = User::where('phone', $normalizedPhone)->lockForUpdate()->first();
+                    if (! $orderUser) {
+                        $orderUser = User::create([
+                            'name'              => $data['customer_name'],
+                            'phone'             => $normalizedPhone,
+                            'email'             => $normalizedPhone.'@phone.luxsign.local',
+                            'email_verified_at' => now(),
+                            'password'          => Hash::make($normalizedPhone),
+                            'role'              => 'customer',
+                        ]);
+                        $newAccount = true;
+                    }
+                }
+
                 // Stock check + decrement (only for items tied to a tracked product),
                 // and enforce each product's minimum-price floor server-side so
                 // it can never be bypassed by tampering with the submitted price.
@@ -163,7 +213,7 @@ class OrderController extends Controller
 
                 return Order::create(array_merge($data, [
                     'status' => 'pending',
-                    'user_id' => $request->user()?->id,
+                    'user_id' => $orderUser->id,
                     'discount_percentage' => $discount,
                     'coupon_code' => $couponCode,
                     'coupon_discount' => $couponDiscount,
@@ -177,6 +227,7 @@ class OrderController extends Controller
             'success' => true,
             'order'   => $order,
             'message' => 'تم استلام طلبك! سنتواصل معك قريباً ✅',
+            'account_created' => $newAccount,
         ]);
     }
 

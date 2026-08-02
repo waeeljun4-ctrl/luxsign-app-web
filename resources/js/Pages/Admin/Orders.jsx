@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import axios from 'axios';
 import AdminLayout from '../../Layouts/AdminLayout';
-import { Modal, StatusBadge } from '../../Components/UI';
+import { Modal, StatusBadge, Toast } from '../../Components/UI';
+import { useConfirm } from '../../Components/useConfirm';
 
 const STATUSES = [
     { value: 'pending',     label: 'جديد' },
@@ -57,10 +58,14 @@ function OrderDetail({ order, open, onClose }) {
                         {order.items?.map((item, i) => (
                             <div key={i} className={`rounded-lg px-3 py-2 ${item.is_custom ? 'bg-gold-pale border border-gold/30' : 'bg-cream'}`}>
                                 <div className="flex gap-2">
-                                    {item.image && (
-                                        <a href={`/storage/${item.image}`} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                                            <img src={`/storage/${item.image}`} className="w-11 h-11 object-cover rounded-lg border border-cream-3 hover:opacity-80 transition-opacity" />
-                                        </a>
+                                    {(item.images?.length ? item.images : item.image ? [item.image] : []).length > 0 && (
+                                        <div className="flex flex-wrap gap-1 w-24 shrink-0">
+                                            {(item.images?.length ? item.images : [item.image]).map((img, idx) => (
+                                                <a key={idx} href={`/storage/${img}`} target="_blank" rel="noopener noreferrer">
+                                                    <img src={`/storage/${img}`} className="w-11 h-11 object-cover rounded-lg border border-cream-3 hover:opacity-80 transition-opacity" />
+                                                </a>
+                                            ))}
+                                        </div>
                                     )}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between">
@@ -129,6 +134,13 @@ export default function Orders({ orders, courierCompanies }) {
     const [sending, setSending] = useState(false);
     const [companyId, setCompanyId] = useState(courierCompanies?.[0]?.id || '');
     const { delete: destroy } = useForm();
+    const { confirmAction, dialog } = useConfirm();
+    const [toast, setToast] = useState({ show: false, msg: '' });
+
+    function showToast(msg) {
+        setToast({ show: true, msg });
+        setTimeout(() => setToast({ show: false, msg: '' }), 3000);
+    }
 
     function toggleCheck(id) {
         setChecked(prev => {
@@ -164,24 +176,27 @@ export default function Orders({ orders, courierCompanies }) {
             setChecked(new Set());
             router.reload({ only: ['orders'] });
         } catch {
-            alert('صار خطأ بالتصدير');
+            showToast('صار خطأ بالتصدير');
         }
         setExporting(false);
     }
 
-    async function sendDirectly() {
+    function sendDirectly() {
         if (!checked.size || !companyId) return;
-        if (!confirm(`رح يتم فتح متصفح تلقائي وتسجيل دخول وإرسال ${checked.size} طلب مباشرة — متأكد؟`)) return;
-        setSending(true);
-        try {
-            const res = await axios.post(route('admin.orders.sendToCourier'), { ids: [...checked], courier_company_id: companyId });
-            alert(res.data.message);
-            setChecked(new Set());
-            router.reload({ only: ['orders'] });
-        } catch (e) {
-            alert(e.response?.data?.message || 'صار خطأ بالإرسال');
-        }
-        setSending(false);
+        confirmAction(`رح يتم فتح متصفح تلقائي وتسجيل دخول وإرسال ${checked.size} طلب مباشرة — متأكد؟`, async (cb) => {
+            setSending(true);
+            try {
+                const res = await axios.post(route('admin.orders.sendToCourier'), { ids: [...checked], courier_company_id: companyId });
+                showToast(res.data.message);
+                setChecked(new Set());
+                router.reload({ only: ['orders'] });
+                cb.onSuccess();
+            } catch (e) {
+                showToast(e.response?.data?.message || 'صار خطأ بالإرسال');
+                cb.onFinish();
+            }
+            setSending(false);
+        });
     }
 
     const pending = orders.filter(o => o.status === 'pending').length;
@@ -189,6 +204,8 @@ export default function Orders({ orders, courierCompanies }) {
     return (
         <>
             <Head title="الطلبات — الإدارة" />
+            {dialog}
+            <Toast message={toast.msg} show={toast.show} />
             <AdminLayout title="🛒 الطلبات">
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-4 mb-6">
@@ -268,7 +285,7 @@ export default function Orders({ orders, courierCompanies }) {
                             <div className="text-right shrink-0">
                                 <p className="font-black text-gold">{order.total}₪</p>
                             </div>
-                            <button onClick={e => { e.stopPropagation(); if(confirm('حذف الطلب؟')) destroy(route('admin.orders.destroy', order.id)); }}
+                            <button onClick={e => { e.stopPropagation(); confirmAction('حذف الطلب؟', (cb) => destroy(route('admin.orders.destroy', order.id), cb)); }}
                                 className="text-gray-300 hover:text-red-500 text-sm transition-colors px-1">✕</button>
                         </div>
                     ))}

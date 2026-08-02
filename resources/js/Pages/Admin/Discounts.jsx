@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Head, useForm, router, Link } from '@inertiajs/react';
 import AdminLayout from '../../Layouts/AdminLayout';
+import { useConfirm } from '../../Components/useConfirm';
 
 function MultiPicker({ label, options, selected, onChange }) {
     function toggle(id) {
@@ -99,6 +100,7 @@ function CampaignForm({ categories, products, onClose }) {
 
 function CampaignRow({ campaign }) {
     const { delete: destroy, data, setData } = useForm({ is_active: campaign.is_active });
+    const { confirmAction, dialog } = useConfirm();
 
     function toggleActive() {
         const next = !data.is_active;
@@ -113,8 +115,8 @@ function CampaignRow({ campaign }) {
     }
 
     function remove() {
-        if (!confirm(`حذف حملة "${campaign.name}"؟`)) return;
-        destroy(route('admin.discounts.destroy', campaign.id));
+        confirmAction(`حذف حملة "${campaign.name}"؟`,
+            (cb) => destroy(route('admin.discounts.destroy', campaign.id), cb));
     }
 
     const notStarted = campaign.starts_at && new Date(campaign.starts_at) > new Date();
@@ -123,6 +125,7 @@ function CampaignRow({ campaign }) {
 
     return (
         <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-cream transition-colors">
+            {dialog}
             <div className="flex-1 min-w-0">
                 <p className="font-black text-sm text-ink">{campaign.name}</p>
                 <p className="text-xs text-muted mt-0.5">

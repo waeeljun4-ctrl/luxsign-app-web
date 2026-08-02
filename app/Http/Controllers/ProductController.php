@@ -49,10 +49,18 @@ class ProductController extends Controller
         ]);
     }
 
+    // A plain "60" is a legacy/simple preset size and stays an int; a
+    // "300×250" dimension pair (fixed_per_size, rectangle shape) must
+    // survive as-is — intval() would truncate it to just "300".
     private function parsePresetSizes(mixed $value): ?array
     {
-        if (is_array($value)) return array_values(array_filter(array_map('intval', $value)));
-        if (is_string($value) && $value !== '') return array_values(array_filter(array_map('intval', explode(',', $value))));
+        $normalize = function ($v) {
+            $v = trim((string) $v);
+            return preg_match('/[×x]/i', $v) ? $v : intval($v);
+        };
+        $keep = fn ($v) => $v !== '' && $v !== 0;
+        if (is_array($value)) return array_values(array_filter(array_map($normalize, $value), $keep));
+        if (is_string($value) && $value !== '') return array_values(array_filter(array_map($normalize, explode(',', $value)), $keep));
         return null;
     }
 

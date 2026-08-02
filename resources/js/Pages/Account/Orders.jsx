@@ -36,10 +36,14 @@ export default function Orders({ orders }) {
                                     <div className="text-xs text-muted space-y-1.5 mb-3">
                                         {(order.items || []).map((item, i) => (
                                             <div key={i} className="flex gap-2">
-                                                {item.image && (
-                                                    <a href={`/storage/${item.image}`} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                                                        <img src={`/storage/${item.image}`} className="w-10 h-10 object-cover rounded-lg border border-cream-3 dark:border-white/10" />
-                                                    </a>
+                                                {(item.images?.length ? item.images : item.image ? [item.image] : []).length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 w-[84px] shrink-0">
+                                                        {(item.images?.length ? item.images : [item.image]).map((img, idx) => (
+                                                            <a key={idx} href={`/storage/${img}`} target="_blank" rel="noopener noreferrer">
+                                                                <img src={`/storage/${img}`} className="w-10 h-10 object-cover rounded-lg border border-cream-3 dark:border-white/10" />
+                                                            </a>
+                                                        ))}
+                                                    </div>
                                                 )}
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center justify-between">

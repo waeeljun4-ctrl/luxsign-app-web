@@ -12,6 +12,23 @@ const BADGE_OPTIONS = [
 ];
 
 const SIMPLE_TYPES = ['fixed', 'sqm', 'pair_width', 'single_width', 'plate_pair', 'plate_single', 'fixed_qty'];
+// These carry several prices at once (one per size / per quantity tier)
+// instead of a single `price` column — individual tiers still get edited
+// from the product's own page, but bulk raise/lower/campaign here can
+// still shift all of them together.
+const MULTI_PRICE_TYPES = ['fixed_per_size', 'plate_qty'];
+const SELECTABLE_TYPES = [...SIMPLE_TYPES, ...MULTI_PRICE_TYPES];
+
+function priceArrayKey(pricingType) {
+    return pricingType === 'plate_qty' ? 'preset_sizes' : 'size_prices';
+}
+
+function priceRangeLabel(row) {
+    const nums = (row[priceArrayKey(row.pricing_type)] || []).filter(n => n != null && !isNaN(n));
+    if (!nums.length) return '—';
+    const min = Math.min(...nums), max = Math.max(...nums);
+    return min === max ? `${min}₪` : `${min}–${max}₪`;
+}
 
 export default function Pricing({ products, categories }) {
     const [rows, setRows] = useState(() =>
@@ -31,7 +48,7 @@ export default function Pricing({ products, categories }) {
         }),
     [rows, search, catFilter]);
 
-    const editableFiltered = filtered.filter(r => SIMPLE_TYPES.includes(r.pricing_type));
+    const editableFiltered = filtered.filter(r => SELECTABLE_TYPES.includes(r.pricing_type));
     const dirtyCount = rows.filter(r => r._dirty).length;
 
     function showToast(msg) {
@@ -48,13 +65,18 @@ export default function Pricing({ products, categories }) {
         if (!row) return;
         setRows(prev => prev.map(r => r.id === id ? { ...r, _saving: true } : r));
         try {
-            await axios.patch(route('admin.pricing.update', id), {
-                price: row.price,
-                compare_price: row.compare_price || null,
-                badge: row.badge || null,
-                min_price: row.min_price || null,
-                show_min_price: !!row.show_min_price,
-            });
+            const payload = SIMPLE_TYPES.includes(row.pricing_type)
+                ? {
+                    price: row.price,
+                    compare_price: row.compare_price || null,
+                    badge: row.badge || null,
+                    min_price: row.min_price || null,
+                    show_min_price: !!row.show_min_price,
+                }
+                : row.pricing_type === 'fixed_per_size'
+                    ? { size_prices: row.size_prices, compare_prices: row.compare_prices }
+                    : { preset_sizes: row.preset_sizes }; // plate_qty
+            await axios.patch(route('admin.pricing.update', id), payload);
             setRows(prev => prev.map(r => r.id === id ? { ...r, _saving: false, _dirty: false, _saved: true } : r));
         } catch {
             setRows(prev => prev.map(r => r.id === id ? { ...r, _saving: false } : r));
@@ -71,25 +93,44 @@ export default function Pricing({ products, categories }) {
         const pct = parseFloat(bulkPct);
         if (!pct || isNaN(pct) || pct <= 0) return;
         const factor = 1 + sign * pct / 100;
+        const bump = n => Math.max(1, Math.round((n || 0) * factor));
         setRows(prev => prev.map(row => {
-            if (!selected.has(row.id) || !SIMPLE_TYPES.includes(row.pricing_type)) return row;
-            return { ...row, price: Math.max(1, Math.round((row.price || 0) * factor)), _dirty: true, _saved: false };
+            if (!selected.has(row.id)) return row;
+            if (SIMPLE_TYPES.includes(row.pricing_type)) {
+                return { ...row, price: bump(row.price), _dirty: true, _saved: false };
+            }
+            if (MULTI_PRICE_TYPES.includes(row.pricing_type)) {
+                const key = priceArrayKey(row.pricing_type);
+                return { ...row, [key]: (row[key] || []).map(bump), _dirty: true, _saved: false };
+            }
+            return row;
         }));
         showToast(`${sign > 0 ? '↑ رفع' : '↓ خفض'} الأسعار ${pct}% — احفظ لتطبيق`);
     }
 
     function applyCampaign() {
-        setRows(prev => prev.map(row =>
-            (selected.has(row.id) && SIMPLE_TYPES.includes(row.pricing_type))
-                ? { ...row, compare_price: row.price, _dirty: true, _saved: false } : row
-        ));
+        setRows(prev => prev.map(row => {
+            if (!selected.has(row.id)) return row;
+            if (SIMPLE_TYPES.includes(row.pricing_type)) {
+                return { ...row, compare_price: row.price, _dirty: true, _saved: false };
+            }
+            // plate_qty has no "old price" concept — only fixed_per_size does.
+            if (row.pricing_type === 'fixed_per_size') {
+                return { ...row, compare_prices: [...(row.size_prices || [])], _dirty: true, _saved: false };
+            }
+            return row;
+        }));
         showToast('🏷️ تم نسخ السعر الحالي كسعر قديم — غيّر السعر الجديد ثم احفظ');
     }
 
     function cancelCampaign() {
-        setRows(prev => prev.map(row =>
-            selected.has(row.id) ? { ...row, compare_price: null, _dirty: true, _saved: false } : row
-        ));
+        setRows(prev => prev.map(row => {
+            if (!selected.has(row.id)) return row;
+            if (row.pricing_type === 'fixed_per_size') {
+                return { ...row, compare_prices: (row.compare_prices || []).map(() => null), _dirty: true, _saved: false };
+            }
+            return { ...row, compare_price: null, _dirty: true, _saved: false };
+        }));
         showToast('✕ تم إلغاء الحملة');
     }
 
@@ -117,8 +158,8 @@ export default function Pricing({ products, categories }) {
             <Head title="مركز التسعير" />
             <AdminLayout title="💰 مركز التسعير">
                 <p className="text-muted text-sm mb-4">
-                    الخصم هون بينطبق على المنتجات ذات السعر الثابت/حسب المساحة أو العرض.
-                    المنتجات بأسعار حسب المقاس المتعدد ("عدّة مقاسات ثابتة") لها خصم خاص من صفحة تعديل المنتج نفسه.
+                    التعديل الفردي (سعر، سعر قديم، الشارة...) هون بيشتغل بس على المنتجات ذات السعر الواحد.
+                    المنتجات بأسعار متعددة (حسب المقاس أو الكمية) — حدّدها وطبّق عليها رفع/خفض % أو حملة خصم من الشريط تحت، وتعديل كل سعر لحاله بيضل من صفحة المنتج نفسه.
                 </p>
 
                 <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -187,6 +228,7 @@ export default function Pricing({ products, categories }) {
                             <tbody>
                                 {filtered.map((row, i) => {
                                     const editable = SIMPLE_TYPES.includes(row.pricing_type);
+                                    const multiPrice = MULTI_PRICE_TYPES.includes(row.pricing_type);
                                     return (
                                         <tr key={row.id} className={`
                                             ${i < filtered.length - 1 ? 'border-b border-cream-3' : ''}
@@ -195,7 +237,7 @@ export default function Pricing({ products, categories }) {
                                             transition-colors
                                         `}>
                                             <td className="p-3 text-center">
-                                                {editable && <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleRow(row.id)} className="accent-gold cursor-pointer" />}
+                                                {(editable || multiPrice) && <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleRow(row.id)} className="accent-gold cursor-pointer" />}
                                             </td>
                                             <td className="p-3">
                                                 <div className="flex items-center gap-2">
@@ -248,8 +290,24 @@ export default function Pricing({ products, categories }) {
                                                     </td>
                                                 </>
                                             ) : (
-                                                <td colSpan={5} className="p-3 text-xs text-muted italic">
-                                                    عدّة مقاسات — عدّل الخصم من صفحة المنتج
+                                                <td colSpan={5} className="p-3">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="text-xs text-muted italic">
+                                                            {multiPrice
+                                                                ? `${row.pricing_type === 'plate_qty' ? 'عدّة كميات' : 'عدّة مقاسات'} (${priceRangeLabel(row)}) — تعديل كل سعر لحاله من صفحة المنتج`
+                                                                : 'عدّة مقاسات — عدّل الخصم من صفحة المنتج'}
+                                                        </span>
+                                                        {multiPrice && (
+                                                            row._saving ? (
+                                                                <span className="text-gold text-sm animate-pulse shrink-0">⏳</span>
+                                                            ) : row._dirty ? (
+                                                                <button onClick={() => saveRow(row.id)} title="حفظ"
+                                                                    className="w-7 h-7 bg-gold text-white rounded-lg flex items-center justify-center hover:bg-ink transition-colors text-xs font-bold shrink-0">💾</button>
+                                                            ) : row._saved ? (
+                                                                <span className="text-green-500 text-sm shrink-0">✅</span>
+                                                            ) : null
+                                                        )}
+                                                    </div>
                                                 </td>
                                             )}
                                         </tr>

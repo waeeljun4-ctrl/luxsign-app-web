@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
@@ -128,6 +129,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // Users (discounts)
     Route::get('/users',                  [UserController::class, 'index'])          ->name('users.index');
     Route::patch('/users/{user}/discount', [UserController::class, 'updateDiscount']) ->name('users.updateDiscount');
+
+    // Admins (site staff — separate from customer accounts above)
+    Route::get('/admins',            [AdminUserController::class, 'index'])  ->name('admins.index');
+    Route::post('/admins',           [AdminUserController::class, 'store'])  ->name('admins.store');
+    Route::put('/admins/{admin}',    [AdminUserController::class, 'update']) ->name('admins.update');
+    Route::delete('/admins/{admin}', [AdminUserController::class, 'destroy'])->name('admins.destroy');
 
     // Pricing center (site-wide / selected-product discounts)
     Route::get('/pricing',             [PricingController::class, 'index'])  ->name('pricing.index');

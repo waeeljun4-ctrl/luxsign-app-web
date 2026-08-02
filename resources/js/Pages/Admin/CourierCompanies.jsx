@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AdminLayout from '../../Layouts/AdminLayout';
+import { useConfirm } from '../../Components/useConfirm';
 
 const FIELD_MAP_EXAMPLE = `{
   "login": {
@@ -117,6 +118,7 @@ function CompanyForm({ company, onClose }) {
 }
 
 function CompanyRow({ company, onEdit }) {
+    const { confirmAction, dialog } = useConfirm();
     function toggleActive() {
         router.patch(route('admin.courierCompanies.update', company.id), {
             name: company.name, login_url: company.login_url, add_shipment_url: company.add_shipment_url,
@@ -124,11 +126,12 @@ function CompanyRow({ company, onEdit }) {
         }, { preserveScroll: true });
     }
     function remove() {
-        if (!confirm(`حذف "${company.name}"؟`)) return;
-        router.delete(route('admin.courierCompanies.destroy', company.id));
+        confirmAction(`حذف "${company.name}"؟`,
+            (cb) => router.delete(route('admin.courierCompanies.destroy', company.id), cb));
     }
     return (
         <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-cream transition-colors">
+            {dialog}
             <div className="flex-1 min-w-0">
                 <p className="font-bold text-sm text-ink">{company.name}</p>
                 <p className="text-xs text-muted mt-0.5" dir="ltr">{company.login_url}</p>

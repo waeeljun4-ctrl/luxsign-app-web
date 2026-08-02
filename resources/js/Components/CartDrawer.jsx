@@ -17,9 +17,9 @@ export default function CartDrawer() {
     const [couponChecking, setCouponChecking] = useState(false);
     const [myCoupon, setMyCoupon] = useState(null); // private coupon available to activate
 
-    function showToast(msg) {
+    function showToast(msg, duration = 3000) {
         setToast({ show: true, msg });
-        setTimeout(() => setToast({ show: false, msg: '' }), 3000);
+        setTimeout(() => setToast({ show: false, msg: '' }), duration);
     }
 
     useEffect(() => {
@@ -82,14 +82,18 @@ export default function CartDrawer() {
             payload.append('items', JSON.stringify(items.map(i => ({ name: i.name, price: i.price ?? 0, qty: i.qty, product_id: i.productId, specs: i.specs || [], is_custom: !!i.isCustom }))));
             payload.append('total', total);
             if (coupon?.code) payload.append('coupon_code', coupon.code);
-            // Each cart item's own reference image (attached on the product page,
+            // Each cart item's own reference images (attached on the product page,
             // not here) — correlated to its position in `items` above.
             items.forEach((item, i) => {
-                if (item.image) payload.append(`item_images[${i}]`, item.image);
+                (item.images || []).forEach(img => payload.append(`item_images[${i}][]`, img));
             });
 
-            await axios.post('/api/orders', payload, { headers: { 'Content-Type': 'multipart/form-data' } });
-            showToast(t('successOrder'));
+            const { data } = await axios.post('/api/orders', payload, { headers: { 'Content-Type': 'multipart/form-data' } });
+            if (data.account_created) {
+                showToast(`${t('successOrder')} — أنشأنا لك حساب تلقائياً، رقم هاتفك هو كلمة السر لتسجيل الدخول لاحقاً 🔑`, 7000);
+            } else {
+                showToast(t('successOrder'));
+            }
             clear();
             setOpen(false);
             setForm({ name: '', phone: '', address: '', notes: '' });
@@ -151,8 +155,13 @@ export default function CartDrawer() {
                         <>
                             {pricedItems.map((item, i) => (
                                 <div key={`p-${i}`} className="flex gap-3 py-3 border-b border-cream-3 dark:border-white/10 items-start">
-                                    {item.imagePreview ? (
-                                        <img src={item.imagePreview} className="w-11 h-11 rounded-xl object-cover shrink-0" />
+                                    {item.imagePreviews?.length ? (
+                                        <div className="relative w-11 h-11 shrink-0">
+                                            <img src={item.imagePreviews[0]} className="w-11 h-11 rounded-xl object-cover" />
+                                            {item.imagePreviews.length > 1 && (
+                                                <span className="absolute -bottom-1 -right-1 bg-ink text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">+{item.imagePreviews.length - 1}</span>
+                                            )}
+                                        </div>
                                     ) : (
                                         <div className="w-11 h-11 bg-cream-2 dark:bg-ink rounded-xl flex items-center justify-center text-xl shrink-0">{item.icon}</div>
                                     )}
@@ -175,8 +184,13 @@ export default function CartDrawer() {
                                     <p className="text-xs font-bold tracking-widest uppercase text-muted mt-3 mb-1">🎨 طلبات تفصيل — بانتظار التسعير</p>
                                     {customItems.map((item, i) => (
                                         <div key={`c-${i}`} className="flex gap-3 py-3 border-b border-cream-3 dark:border-white/10 items-start">
-                                            {item.imagePreview ? (
-                                                <img src={item.imagePreview} className="w-11 h-11 rounded-xl object-cover shrink-0" />
+                                            {item.imagePreviews?.length ? (
+                                                <div className="relative w-11 h-11 shrink-0">
+                                                    <img src={item.imagePreviews[0]} className="w-11 h-11 rounded-xl object-cover" />
+                                                    {item.imagePreviews.length > 1 && (
+                                                        <span className="absolute -bottom-1 -right-1 bg-ink text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">+{item.imagePreviews.length - 1}</span>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <div className="w-11 h-11 bg-cream-2 dark:bg-ink rounded-xl flex items-center justify-center text-xl shrink-0">{item.icon}</div>
                                             )}

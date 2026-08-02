@@ -8,16 +8,16 @@ export function CartProvider({ children }) {
 
     // price === null marks a "custom order" item — no price yet, the admin
     // quotes it manually after the order comes in.
-    const addItem = useCallback((name, icon, price, category, productId = null, specs = [], image = null, isCustom = false) => {
-        const imagePreview = image ? URL.createObjectURL(image) : null;
+    const addItem = useCallback((name, icon, price, category, productId = null, specs = [], images = [], isCustom = false) => {
+        const imagePreviews = images.map(f => URL.createObjectURL(f));
         setItems(prev => {
             const existing = prev.find(i => i.name === name);
             if (existing) {
                 return prev.map(i => i.name === name
-                    ? { ...i, qty: i.qty + 1, image: image ?? i.image, imagePreview: imagePreview ?? i.imagePreview }
+                    ? { ...i, qty: i.qty + 1, images: images.length ? images : i.images, imagePreviews: imagePreviews.length ? imagePreviews : i.imagePreviews }
                     : i);
             }
-            return [...prev, { name, icon, price, category, productId, specs, image, imagePreview, isCustom, qty: 1 }];
+            return [...prev, { name, icon, price, category, productId, specs, images, imagePreviews, isCustom, qty: 1 }];
         });
     }, []);
 
