@@ -11,6 +11,10 @@ const navItems = [
     { href: '/admin/coupons',      label: 'الكوبونات',   icon: '🎟️' },
     { href: '/admin/discounts',    label: 'حملات الخصم', icon: '🏷️' },
     { href: '/admin/inventory',    label: 'المخزن',      icon: '🏬' },
+    { href: '/admin/external-sales', label: 'مبيعات خارجية', icon: '📲' },
+    { href: '/admin/expenses',     label: 'المصاريف',    icon: '💸' },
+    { href: '/admin/profit-report', label: 'تقرير الأرباح', icon: '📈' },
+    { href: '/admin/ledger',       label: 'دفتر الحسابات', icon: '📒' },
     { href: '/admin/courier-companies', label: 'شركات التوصيل', icon: '🚚' },
     { href: '/admin/orders',       label: 'الطلبات',     icon: '🛒' },
     { href: '/admin/archive',      label: 'الأرشيف',     icon: '🗄️' },
@@ -37,7 +41,7 @@ export default function AdminLayout({ children, title }) {
             )}
 
             {/* Sidebar */}
-            <aside className={`w-56 bg-ink flex flex-col shrink-0 fixed top-0 bottom-0 right-0 z-30
+            <aside className={`print:hidden w-56 bg-ink flex flex-col shrink-0 fixed top-0 bottom-0 right-0 z-30
                 transition-transform duration-300 lg:translate-x-0
                 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="p-5 border-b border-white/10">
@@ -66,9 +70,9 @@ export default function AdminLayout({ children, title }) {
             </aside>
 
             {/* Main */}
-            <main className="flex-1 lg:mr-56 flex flex-col min-h-screen">
+            <main className="flex-1 lg:mr-56 print:mr-0 flex flex-col min-h-screen">
                 {/* Header */}
-                <header className="bg-white border-b border-cream-3 px-6 py-4 sticky top-0 z-20 flex items-center gap-3">
+                <header className="print:hidden bg-white border-b border-cream-3 px-6 py-4 sticky top-0 z-20 flex items-center gap-3">
                     <button onClick={() => setSidebarOpen(true)}
                         className="lg:hidden shrink-0 text-ink text-2xl leading-none" aria-label="فتح القائمة">
                         ☰

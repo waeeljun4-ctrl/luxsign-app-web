@@ -16,7 +16,7 @@ class Product extends Model
         'pricing_type', 'is_custom', 'price', 'compare_price', 'min_price', 'show_min_price', 'preset_sizes',
         'size_prices', 'compare_prices', 'max_size', 'fixed_size_label', 'qty_labels', 'shape',
         'designer_type', 'is_active', 'sort_order',
-        'track_stock', 'stock_quantity',
+        'track_stock', 'stock_quantity', 'wholesale_price',
     ];
 
     protected $casts = [
@@ -24,6 +24,7 @@ class Product extends Model
         'is_custom'      => 'boolean',
         'price'          => 'float',
         'compare_price'  => 'float',
+        'wholesale_price' => 'float',
         'min_price'      => 'float',
         'show_min_price' => 'boolean',
         'preset_sizes'   => 'array',

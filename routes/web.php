@@ -15,7 +15,11 @@ use App\Http\Controllers\Admin\ArchiveController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\CourierCompanyController;
 use App\Http\Controllers\Admin\DiscountCampaignController;
+use App\Http\Controllers\Admin\ExpenseController;
+use App\Http\Controllers\Admin\ExternalSaleController;
 use App\Http\Controllers\Admin\InventoryController;
+use App\Http\Controllers\Admin\LedgerController;
+use App\Http\Controllers\Admin\ProfitReportController;
 use App\Http\Controllers\Admin\PricingController;
 use App\Http\Controllers\Admin\ProductSpecFieldController;
 use App\Http\Controllers\Admin\SiteSettingController;
@@ -156,6 +160,25 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // Inventory (stock quantities)
     Route::get('/inventory',              [InventoryController::class, 'index'])  ->name('inventory.index');
     Route::patch('/inventory/{product}',  [InventoryController::class, 'update']) ->name('inventory.update');
+
+    // Expenses
+    Route::get('/expenses',                 [ExpenseController::class, 'index'])  ->name('expenses.index');
+    Route::post('/expenses',                [ExpenseController::class, 'store'])  ->name('expenses.store');
+    Route::delete('/expenses/{expense}',    [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+
+    // External sales (Instagram/WhatsApp/in-person — outside the site)
+    Route::get('/external-sales',                   [ExternalSaleController::class, 'index'])  ->name('externalSales.index');
+    Route::post('/external-sales',                  [ExternalSaleController::class, 'store'])  ->name('externalSales.store');
+    Route::delete('/external-sales/{externalSale}',  [ExternalSaleController::class, 'destroy'])->name('externalSales.destroy');
+
+    // Profit report (website + external sales, minus cost and expenses)
+    Route::get('/profit-report', [ProfitReportController::class, 'index'])->name('profitReport.index');
+
+    // Ledger (workers/suppliers due & payment tracking)
+    Route::get('/ledger',                    [LedgerController::class, 'index'])      ->name('ledger.index');
+    Route::post('/ledger/parties',           [LedgerController::class, 'storeParty']) ->name('ledger.parties.store');
+    Route::post('/ledger/entries',           [LedgerController::class, 'storeEntry']) ->name('ledger.entries.store');
+    Route::delete('/ledger/entries/{entry}', [LedgerController::class, 'destroyEntry'])->name('ledger.entries.destroy');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

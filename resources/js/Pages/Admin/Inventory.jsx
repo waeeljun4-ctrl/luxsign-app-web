@@ -14,6 +14,17 @@ export default function Inventory({ products }) {
         rows.filter(r => !search || r.name.includes(search)),
     [rows, search]);
 
+    // Only tracked products have a real quantity on hand — untracked ones
+    // are "always available" with no meaningful count to value.
+    const { totalWholesaleValue, totalRetailValue } = useMemo(() => {
+        return rows.filter(r => r.track_stock).reduce((acc, r) => {
+            const qty = r.stock_quantity || 0;
+            acc.totalWholesaleValue += qty * (r.wholesale_price || 0);
+            acc.totalRetailValue += qty * (r.price || 0);
+            return acc;
+        }, { totalWholesaleValue: 0, totalRetailValue: 0 });
+    }, [rows]);
+
     const dirtyCount = rows.filter(r => r._dirty).length;
 
     function showToast(msg) {
@@ -33,6 +44,7 @@ export default function Inventory({ products }) {
             await axios.patch(route('admin.inventory.update', id), {
                 track_stock: row.track_stock,
                 stock_quantity: row.stock_quantity,
+                wholesale_price: row.wholesale_price || null,
             });
             setRows(prev => prev.map(r => r.id === id ? { ...r, _saving: false, _dirty: false, _saved: true } : r));
         } catch {
@@ -52,7 +64,19 @@ export default function Inventory({ products }) {
             <AdminLayout title="📦 المخزن">
                 <p className="text-muted text-sm mb-4">
                     فعّل "تتبع الكمية" فقط للمنتجات اللي بدك تراقب مخزونها — الباقي بضل متاح دايماً بدون حد أقصى.
+                    سعر المفرق (يلي بيشوفه الزبون بالمتجر) بيجي تلقائي من صفحة المنتج — إنت بس بتحدد سعر الجملة.
                 </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                    <div className="bg-white rounded-2xl border border-cream-3 p-5">
+                        <p className="text-xs text-muted mb-1">قيمة المخزون بسعر الجملة</p>
+                        <p className="text-2xl font-black text-ink">{totalWholesaleValue.toLocaleString('ar')}₪</p>
+                    </div>
+                    <div className="bg-white rounded-2xl border border-cream-3 p-5">
+                        <p className="text-xs text-muted mb-1">قيمة المخزون بسعر المفرق</p>
+                        <p className="text-2xl font-black text-gold">{totalRetailValue.toLocaleString('ar')}₪</p>
+                    </div>
+                </div>
 
                 <div className="flex flex-wrap items-center gap-2 mb-4">
                     <input value={search} onChange={e => setSearch(e.target.value)}
@@ -73,56 +97,80 @@ export default function Inventory({ products }) {
                             <thead>
                                 <tr className="bg-cream-2 border-b border-cream-3 text-[11px] font-bold tracking-widest uppercase text-muted">
                                     <th className="p-3 text-right min-w-[200px]">المنتج</th>
-                                    <th className="p-3 w-36 text-center">تتبع الكمية</th>
-                                    <th className="p-3 w-32 text-center">الكمية المتوفرة</th>
+                                    <th className="p-3 w-32 text-center">تتبع الكمية</th>
+                                    <th className="p-3 w-28 text-center">الكمية المتوفرة</th>
+                                    <th className="p-3 w-28 text-center">سعر المفرق (₪)</th>
+                                    <th className="p-3 w-28 text-center">سعر الجملة (₪)</th>
+                                    <th className="p-3 w-32 text-center">قيمة المخزون (جملة)</th>
+                                    <th className="p-3 w-32 text-center">قيمة المخزون (مفرق)</th>
                                     <th className="p-3 w-10"></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filtered.map((row, i) => (
-                                    <tr key={row.id} className={`
-                                        ${i < filtered.length - 1 ? 'border-b border-cream-3' : ''}
-                                        ${row._dirty ? 'border-r-4 border-r-amber-400' : ''}
-                                        hover:bg-cream transition-colors
-                                    `}>
-                                        <td className="p-3">
-                                            <div className="flex items-center gap-2">
-                                                {row.image
-                                                    ? <img src={`/storage/${row.image}`} className="w-8 h-8 rounded-lg object-cover shrink-0" />
-                                                    : <span className="w-8 h-8 rounded-lg bg-cream-2 flex items-center justify-center shrink-0">🔆</span>}
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-bold text-ink truncate max-w-[220px]">{row.name}</p>
-                                                    <p className="text-xs text-muted truncate">{row.category?.name}</p>
+                                {filtered.map((row, i) => {
+                                    const qty = row.stock_quantity || 0;
+                                    const wholesaleValue = row.track_stock ? qty * (row.wholesale_price || 0) : null;
+                                    const retailValue = row.track_stock ? qty * (row.price || 0) : null;
+                                    return (
+                                        <tr key={row.id} className={`
+                                            ${i < filtered.length - 1 ? 'border-b border-cream-3' : ''}
+                                            ${row._dirty ? 'border-r-4 border-r-amber-400' : ''}
+                                            hover:bg-cream transition-colors
+                                        `}>
+                                            <td className="p-3">
+                                                <div className="flex items-center gap-2">
+                                                    {row.image
+                                                        ? <img src={`/storage/${row.image}`} className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                                                        : <span className="w-8 h-8 rounded-lg bg-cream-2 flex items-center justify-center shrink-0">🔆</span>}
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-bold text-ink truncate max-w-[220px]">{row.name}</p>
+                                                        <p className="text-xs text-muted truncate">{row.category?.name}</p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="p-3 text-center">
-                                            <label className="inline-flex items-center cursor-pointer">
-                                                <input type="checkbox" checked={row.track_stock}
-                                                    onChange={e => patch(row.id, { track_stock: e.target.checked })}
-                                                    className="accent-gold w-4 h-4 cursor-pointer" />
-                                            </label>
-                                        </td>
-                                        <td className="p-3 text-center">
-                                            <input type="number" min="0" value={row.stock_quantity}
-                                                disabled={!row.track_stock}
-                                                onChange={e => patch(row.id, { stock_quantity: parseInt(e.target.value) || 0 })}
-                                                className="border border-cream-3 focus:border-gold rounded-lg px-2 py-1.5 text-sm text-center text-ink bg-white outline-none w-20 disabled:opacity-40 disabled:bg-cream-2" />
-                                        </td>
-                                        <td className="p-3 text-center w-10">
-                                            {row._saving ? (
-                                                <span className="text-gold text-sm animate-pulse">⏳</span>
-                                            ) : row._dirty ? (
-                                                <button onClick={() => saveRow(row.id)} title="حفظ"
-                                                    className="w-7 h-7 bg-gold text-white rounded-lg flex items-center justify-center hover:bg-ink transition-colors text-xs font-bold mx-auto">💾</button>
-                                            ) : row._saved ? (
-                                                <span className="text-green-500 text-sm">✅</span>
-                                            ) : null}
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td className="p-3 text-center">
+                                                <label className="inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" checked={row.track_stock}
+                                                        onChange={e => patch(row.id, { track_stock: e.target.checked })}
+                                                        className="accent-gold w-4 h-4 cursor-pointer" />
+                                                </label>
+                                            </td>
+                                            <td className="p-3 text-center">
+                                                <input type="number" min="0" value={row.stock_quantity}
+                                                    disabled={!row.track_stock}
+                                                    onChange={e => patch(row.id, { stock_quantity: parseInt(e.target.value) || 0 })}
+                                                    className="border border-cream-3 focus:border-gold rounded-lg px-2 py-1.5 text-sm text-center text-ink bg-white outline-none w-20 disabled:opacity-40 disabled:bg-cream-2" />
+                                            </td>
+                                            <td className="p-3 text-center text-muted">
+                                                {row.price ?? '—'}
+                                            </td>
+                                            <td className="p-3 text-center">
+                                                <input type="number" min="0" step="0.01" value={row.wholesale_price ?? ''}
+                                                    placeholder="—"
+                                                    onChange={e => patch(row.id, { wholesale_price: e.target.value === '' ? null : parseFloat(e.target.value) })}
+                                                    className="border border-cream-3 focus:border-gold rounded-lg px-2 py-1.5 text-sm text-center text-ink bg-white outline-none w-24 placeholder-muted/40" />
+                                            </td>
+                                            <td className="p-3 text-center font-bold text-ink">
+                                                {wholesaleValue !== null ? `${wholesaleValue.toLocaleString('ar')}₪` : '—'}
+                                            </td>
+                                            <td className="p-3 text-center font-bold text-gold">
+                                                {retailValue !== null ? `${retailValue.toLocaleString('ar')}₪` : '—'}
+                                            </td>
+                                            <td className="p-3 text-center w-10">
+                                                {row._saving ? (
+                                                    <span className="text-gold text-sm animate-pulse">⏳</span>
+                                                ) : row._dirty ? (
+                                                    <button onClick={() => saveRow(row.id)} title="حفظ"
+                                                        className="w-7 h-7 bg-gold text-white rounded-lg flex items-center justify-center hover:bg-ink transition-colors text-xs font-bold mx-auto">💾</button>
+                                                ) : row._saved ? (
+                                                    <span className="text-green-500 text-sm">✅</span>
+                                                ) : null}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                                 {filtered.length === 0 && (
-                                    <tr><td colSpan={4} className="text-center py-12 text-muted text-sm">لا توجد نتائج</td></tr>
+                                    <tr><td colSpan={8} className="text-center py-12 text-muted text-sm">لا توجد نتائج</td></tr>
                                 )}
                             </tbody>
                         </table>
