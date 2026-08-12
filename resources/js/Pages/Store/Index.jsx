@@ -282,8 +282,8 @@ function ProductCard({ product, onOpen }) {
 
             {/* Image / Video */}
             <div className="h-40 bg-gradient-to-br from-cream-2 to-cream-3 dark:from-ink dark:to-ink-2 flex items-center justify-center text-4xl relative overflow-hidden">
-                {product.image
-                    ? <img src={`/storage/${product.image}`} alt={name} className={`w-full h-full object-cover ${soldOut ? 'opacity-50' : ''}`} />
+                {(product.image || product.images?.[0])
+                    ? <img src={`/storage/${product.image || product.images[0]}`} alt={name} className={`w-full h-full object-cover ${soldOut ? 'opacity-50' : ''}`} />
                     : (product.icon || '📦')
                 }
                 {soldOut && (

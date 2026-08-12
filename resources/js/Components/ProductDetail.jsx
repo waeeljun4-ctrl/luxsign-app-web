@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { usePage } from '@inertiajs/react';
 import { useCart } from './CartContext';
 import { useLocale } from './LocaleContext';
@@ -95,7 +95,19 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
     const categoryName = localField(product.category, 'name', locale);
 
     const galleryImages = [product.image, ...(product.images || [])].filter(Boolean);
-    const [activeImage, setActiveImage] = useState(galleryImages[0] ?? null);
+    const [activeIndex, setActiveIndex] = useState(0);
+    const touchStartX = useRef(null);
+
+    function prevImage() { setActiveIndex(i => (i - 1 + galleryImages.length) % galleryImages.length); }
+    function nextImage() { setActiveIndex(i => (i + 1) % galleryImages.length); }
+
+    function handleTouchStart(e) { touchStartX.current = e.touches[0].clientX; }
+    function handleTouchEnd(e) {
+        if (touchStartX.current === null) return;
+        const delta = e.changedTouches[0].clientX - touchStartX.current;
+        if (Math.abs(delta) > 40) (delta > 0 ? prevImage : nextImage)();
+        touchStartX.current = null;
+    }
 
     // Per-quantity labels (plate_qty) are admin free text — fall back to the
     // Arabic version whenever no translation was entered for this locale.
@@ -173,17 +185,36 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
                     </div>
                 ) : (
                     <>
-                        <div className="mx-4 mt-4 h-44 bg-gradient-to-br from-cream-2 to-cream-3 dark:from-ink dark:to-ink-2 rounded-xl overflow-hidden flex items-center justify-center text-5xl">
-                            {activeImage
-                                ? <img src={`/storage/${activeImage}`} alt={name} className="w-full h-full object-contain" />
-                                : (product.icon || '📦')
-                            }
+                        <div className="mx-4 mt-4 h-44 bg-gradient-to-br from-cream-2 to-cream-3 dark:from-ink dark:to-ink-2 rounded-xl overflow-hidden relative">
+                            {galleryImages.length > 0 ? (
+                                <>
+                                    <div dir="ltr" className="flex h-full transition-transform duration-500 ease-out"
+                                        style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+                                        onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+                                        {galleryImages.map(path => (
+                                            <div key={path} className="w-full h-full shrink-0 flex items-center justify-center">
+                                                <img src={`/storage/${path}`} alt={name} className="w-full h-full object-contain" draggable={false} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {galleryImages.length > 1 && (
+                                        <>
+                                            <button onClick={prevImage} aria-label="prev" type="button"
+                                                className="absolute top-1/2 -translate-y-1/2 end-2 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-ink flex items-center justify-center backdrop-blur-sm shadow-sm transition-colors">›</button>
+                                            <button onClick={nextImage} aria-label="next" type="button"
+                                                className="absolute top-1/2 -translate-y-1/2 start-2 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-ink flex items-center justify-center backdrop-blur-sm shadow-sm transition-colors">‹</button>
+                                        </>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-5xl">{product.icon || '📦'}</div>
+                            )}
                         </div>
                         {galleryImages.length > 1 && (
                             <div className="mx-4 mt-2 flex gap-2 overflow-x-auto scrollbar-hide">
-                                {galleryImages.map(path => (
-                                    <button key={path} type="button" onClick={() => setActiveImage(path)}
-                                        className={`shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors ${activeImage === path ? 'border-gold' : 'border-cream-3 dark:border-white/10 opacity-70 hover:opacity-100'}`}>
+                                {galleryImages.map((path, i) => (
+                                    <button key={path} type="button" onClick={() => setActiveIndex(i)}
+                                        className={`shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors ${activeIndex === i ? 'border-gold' : 'border-cream-3 dark:border-white/10 opacity-70 hover:opacity-100'}`}>
                                         <img src={`/storage/${path}`} alt="" className="w-full h-full object-cover" />
                                     </button>
                                 ))}
