@@ -51,6 +51,20 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
     const [selectedSize, setSelectedSize] = useState(product.preset_sizes?.[0] ?? null);
     const [specValues, setSpecValues] = useState({});
     const [specError, setSpecError] = useState('');
+    const [previewDims, setPreviewDims] = useState({}); // { [fieldId]: { w, h } } — for 'preview'-type spec fields
+
+    // 'preview'-type spec fields are purely visual (never affect price) —
+    // typing a length/width (or diameter, for circle) just updates the
+    // scaled box below and formats the stored spec value for the order.
+    function updatePreviewDim(field, key, value) {
+        const current = previewDims[field.id] || { w: 80, h: 80 };
+        const next = { ...current, [key]: Number(value) || 0 };
+        setPreviewDims(v => ({ ...v, [field.id]: next }));
+        const formatted = field.preview_shape === 'circle'
+            ? `⌀${next.w} ${t('cm')}`
+            : `${next.w}×${next.h} ${t('cm')}`;
+        setSpecValues(v => ({ ...v, [field.id]: formatted }));
+    }
     const MAX_REF_IMAGES = 10;
     const [refImages, setRefImages] = useState([]);
     const [refImagePreviews, setRefImagePreviews] = useState([]);
@@ -318,12 +332,42 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
                                 // Arabic text — the admin dashboard is Arabic-only and reads specs
                                 // back verbatim; only what the customer sees here is translated.
                                 const localeOptions = locale === 'he' ? field.options_he : locale === 'en' ? field.options_en : null;
+                                const pDims = previewDims[field.id] || { w: 80, h: 80 };
+                                const pIsCircle = field.preview_shape === 'circle';
+                                const pMaxPx = 64;
+                                const pW = pDims.w || 1;
+                                const pH = pIsCircle ? pW : (pDims.h || 1);
+                                const pRatio = pW / pH;
+                                const pBw = pRatio >= 1 ? pMaxPx : pMaxPx * pRatio;
+                                const pBh = pRatio >= 1 ? pMaxPx / pRatio : pMaxPx;
                                 return (
                                 <div key={field.id}>
                                     <label className="text-xs font-bold text-muted block mb-1">
                                         {localField(field, 'label', locale)} {field.is_required && <span className="text-red-500">*</span>}
                                     </label>
-                                    {field.field_type === 'select' ? (
+                                    {field.field_type === 'preview' ? (
+                                        <div className="bg-cream-2 dark:bg-ink rounded-xl p-3 flex flex-col items-center gap-2">
+                                            <div className="flex gap-2 w-full">
+                                                <input type="number" min="1" value={pDims.w}
+                                                    onChange={e => updatePreviewDim(field, 'w', e.target.value)}
+                                                    placeholder={pIsCircle ? t('diameterLabel') : t('widthLabel')}
+                                                    className="w-full px-3 py-2 border-2 border-cream-3 dark:border-white/10 focus:border-gold rounded-lg text-sm text-center text-ink dark:text-cream bg-white dark:bg-ink outline-none" />
+                                                {!pIsCircle && (
+                                                    <input type="number" min="1" value={pDims.h}
+                                                        onChange={e => updatePreviewDim(field, 'h', e.target.value)}
+                                                        placeholder={t('heightLabel')}
+                                                        className="w-full px-3 py-2 border-2 border-cream-3 dark:border-white/10 focus:border-gold rounded-lg text-sm text-center text-ink dark:text-cream bg-white dark:bg-ink outline-none" />
+                                                )}
+                                            </div>
+                                            <div className="h-16 flex items-center justify-center">
+                                                <div style={{ width: pBw, height: pBh }}
+                                                    className={`bg-gradient-to-br from-ink to-ink-2 border-2 border-gold transition-all duration-300 ${pIsCircle ? 'rounded-full' : 'rounded'}`} />
+                                            </div>
+                                            <p className="text-sm font-bold text-gold">
+                                                {pIsCircle ? `⌀ ${pDims.w} ${t('cm')}` : `${pDims.w} × ${pDims.h} ${t('cm')}`}
+                                            </p>
+                                        </div>
+                                    ) : field.field_type === 'select' ? (
                                         <select value={specValues[field.id] ?? ''}
                                             onChange={e => setSpecValues(v => ({ ...v, [field.id]: e.target.value }))}
                                             className="w-full px-3 py-2 border-2 border-cream-3 dark:border-white/10 focus:border-gold rounded-lg text-sm text-ink dark:text-cream bg-white dark:bg-ink outline-none">
@@ -355,27 +399,30 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
                         </div>
                     )}
 
-                    {/* Reference images to clarify what's wanted, attached to this item */}
-                    <div>
-                        <label className="text-xs font-bold tracking-widest uppercase text-muted block mb-2">
-                            {t('refImagesLabel')(MAX_REF_IMAGES)}
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                            {refImagePreviews.map((src, i) => (
-                                <div key={i} className="relative w-16 h-16">
-                                    <img src={src} className="w-16 h-16 object-cover rounded-xl border border-cream-3 dark:border-white/10" />
-                                    <button type="button" onClick={() => removeRefImage(i)}
-                                        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center leading-none">✕</button>
-                                </div>
-                            ))}
-                            {refImages.length < MAX_REF_IMAGES && (
-                                <label className="w-16 h-16 flex flex-col items-center justify-center gap-0.5 border-2 border-dashed border-cream-3 dark:border-white/10 rounded-xl cursor-pointer text-muted hover:border-gold hover:text-gold transition-colors">
-                                    <span className="text-xl leading-none">📷</span>
-                                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleRefImageChange} />
-                                </label>
-                            )}
+                    {/* Reference images to clarify what's wanted — explicit per-product
+                        opt-in (admin toggle), not shown on every product. */}
+                    {product.show_ref_images && (
+                        <div>
+                            <label className="text-xs font-bold tracking-widest uppercase text-muted block mb-2">
+                                {t('refImagesLabel')(MAX_REF_IMAGES)}
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                {refImagePreviews.map((src, i) => (
+                                    <div key={i} className="relative w-16 h-16">
+                                        <img src={src} className="w-16 h-16 object-cover rounded-xl border border-cream-3 dark:border-white/10" />
+                                        <button type="button" onClick={() => removeRefImage(i)}
+                                            className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center leading-none">✕</button>
+                                    </div>
+                                ))}
+                                {refImages.length < MAX_REF_IMAGES && (
+                                    <label className="w-16 h-16 flex flex-col items-center justify-center gap-0.5 border-2 border-dashed border-cream-3 dark:border-white/10 rounded-xl cursor-pointer text-muted hover:border-gold hover:text-gold transition-colors">
+                                        <span className="text-xl leading-none">📷</span>
+                                        <input type="file" accept="image/*" multiple className="hidden" onChange={handleRefImageChange} />
+                                    </label>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Live price — custom-order products have none */}
                     {!product.is_custom && (

@@ -8,7 +8,7 @@ class ProductSpecField extends Model
 {
     protected $fillable = [
         'product_id', 'label', 'label_he', 'label_en',
-        'field_type', 'options', 'options_he', 'options_en',
+        'field_type', 'preview_shape', 'options', 'options_he', 'options_en',
         'is_required', 'sort_order',
     ];
 

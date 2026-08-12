@@ -9,6 +9,7 @@ const FIELD_TYPES = [
     { value: 'number', label: 'رقم' },
     { value: 'select', label: 'قائمة اختيار' },
     { value: 'boolean', label: 'نعم / لا' },
+    { value: 'preview', label: 'معاينة (دائري/مستطيل)' },
 ];
 
 function FieldForm({ open, onClose, templateId, field }) {
@@ -18,6 +19,7 @@ function FieldForm({ open, onClose, templateId, field }) {
         label_he: field?.label_he || '',
         label_en: field?.label_en || '',
         field_type: field?.field_type || 'text',
+        preview_shape: field?.preview_shape || 'rectangle',
         options: (field?.options || []).join(', '),
         options_he: (field?.options_he || []).join(', '),
         options_en: (field?.options_en || []).join(', '),
@@ -34,6 +36,7 @@ function FieldForm({ open, onClose, templateId, field }) {
         options_en: d.field_type === 'select' && d.options_en
             ? d.options_en.split(',').map(s => s.trim()).filter(Boolean)
             : null,
+        preview_shape: d.field_type === 'preview' ? d.preview_shape : null,
     }));
 
     function submit(e) {
@@ -75,6 +78,16 @@ function FieldForm({ open, onClose, templateId, field }) {
                         <Input label="الخيارات بالإنجليزي 🌍 (اختياري — بنفس الترتيب)" value={data.options_en}
                             onChange={e => setData('options_en', e.target.value)} placeholder="White, Warm yellow, RGB" />
                     </>
+                )}
+                {data.field_type === 'preview' && (
+                    <div className="flex flex-col gap-1">
+                        <label className="text-xs font-bold tracking-widest uppercase text-muted">شكل المعاينة</label>
+                        <select value={data.preview_shape} onChange={e => setData('preview_shape', e.target.value)}
+                            className="px-3 py-2 border-2 border-cream-3 focus:border-gold rounded-lg text-sm text-ink bg-cream outline-none">
+                            <option value="rectangle">مستطيل</option>
+                            <option value="circle">دائري</option>
+                        </select>
+                    </div>
                 )}
                 <div className="flex gap-2 pt-1">
                     <button type="button" onClick={onClose} className="bg-cream-2 text-ink border border-cream-3 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-cream-3">إلغاء</button>

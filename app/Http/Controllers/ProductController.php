@@ -99,6 +99,7 @@ class ProductController extends Controller
             'badge_en'       => 'nullable|string|max:30',
             'pricing_type'   => 'required|in:fixed,sqm,plate_pair,plate_single,pair_width,single_width,plate_qty,fixed_per_size,fixed_qty',
             'is_custom'      => 'boolean',
+            'show_ref_images' => 'boolean',
             'price'          => 'required|numeric|min:0',
             'min_price'      => 'nullable|numeric|min:0',
             'show_min_price' => 'boolean',

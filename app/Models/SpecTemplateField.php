@@ -8,7 +8,7 @@ class SpecTemplateField extends Model
 {
     protected $fillable = [
         'spec_template_id', 'label', 'label_he', 'label_en',
-        'field_type', 'options', 'options_he', 'options_en', 'sort_order',
+        'field_type', 'preview_shape', 'options', 'options_he', 'options_en', 'sort_order',
     ];
 
     protected $casts = [

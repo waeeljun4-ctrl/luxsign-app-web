@@ -116,6 +116,7 @@ export default function ProductEdit({ product, categories, specFields, specTempl
         badge_he:       product?.badge_he ?? '',
         badge_en:       product?.badge_en ?? '',
         is_custom:      product?.is_custom ?? false,
+        show_ref_images: product?.show_ref_images ?? false,
         pricing_type:   product?.pricing_type ?? 'fixed',
         price:          product?.price ?? '',
         min_price:      product?.min_price ?? '',
@@ -544,6 +545,12 @@ export default function ProductEdit({ product, categories, specFields, specTempl
                                         هاد التصنيف للإدارة بس — الزبون ما بيشوفه إطلاقاً. المنتج بيظهر بدون سعر، والزبون يعبي المواصفات بدل هيك (قسم "🧩 مواصفات مخصصة" تحت، بعد ما تحفظ المنتج أول مرة)، وإنت بتسعّره يدوياً بعد ما توصلك الطلبية.
                                     </p>
                                 )}
+                                <label className="flex items-center gap-2 cursor-pointer pt-1">
+                                    <input type="checkbox" checked={data.show_ref_images}
+                                        onChange={e => setData('show_ref_images', e.target.checked)}
+                                        className="accent-gold" />
+                                    <span className="text-sm font-bold text-ink">📷 السماح للزبون برفع صورة توضيحية</span>
+                                </label>
                             </div>
 
                             {/* التسعير */}
@@ -712,6 +719,7 @@ const SPEC_FIELD_TYPES = [
     { value: 'number', label: 'رقم' },
     { value: 'select', label: 'قائمة اختيار' },
     { value: 'boolean', label: 'نعم / لا' },
+    { value: 'preview', label: 'معاينة (دائري/مستطيل)' },
 ];
 
 /**
@@ -805,6 +813,7 @@ function SpecFieldForm({ product, field, onDone }) {
         label_he: field?.label_he || '',
         label_en: field?.label_en || '',
         field_type: field?.field_type || 'text',
+        preview_shape: field?.preview_shape || 'rectangle',
         options: (field?.options || []).join(', '),
         options_he: (field?.options_he || []).join(', '),
         options_en: (field?.options_en || []).join(', '),
@@ -822,6 +831,7 @@ function SpecFieldForm({ product, field, onDone }) {
         options_en: d.field_type === 'select' && d.options_en
             ? d.options_en.split(',').map(s => s.trim()).filter(Boolean)
             : null,
+        preview_shape: d.field_type === 'preview' ? d.preview_shape : null,
     }));
 
     function submit(e) {
@@ -859,6 +869,12 @@ function SpecFieldForm({ product, field, onDone }) {
                             onChange={e => setData('options_en', e.target.value)} placeholder="White, Warm yellow, RGB" />
                     </div>
                 </>
+            )}
+            {data.field_type === 'preview' && (
+                <Select label="شكل المعاينة" value={data.preview_shape} onChange={e => setData('preview_shape', e.target.value)}>
+                    <option value="rectangle">مستطيل</option>
+                    <option value="circle">دائري</option>
+                </Select>
             )}
             <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={data.is_required} onChange={e => setData('is_required', e.target.checked)} className="accent-gold" />

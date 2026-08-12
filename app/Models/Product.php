@@ -13,7 +13,7 @@ class Product extends Model
         'category_id', 'name', 'name_he', 'name_en',
         'description', 'description_he', 'description_en',
         'icon', 'image', 'images', 'video_url', 'video', 'badge', 'badge_he', 'badge_en',
-        'pricing_type', 'is_custom', 'price', 'compare_price', 'min_price', 'show_min_price', 'preset_sizes',
+        'pricing_type', 'is_custom', 'show_ref_images', 'price', 'compare_price', 'min_price', 'show_min_price', 'preset_sizes',
         'size_prices', 'compare_prices', 'max_size', 'fixed_size_label', 'qty_labels', 'qty_labels_he', 'qty_labels_en', 'shape',
         'designer_type', 'is_active', 'sort_order',
         'track_stock', 'stock_quantity', 'wholesale_price',
@@ -22,6 +22,7 @@ class Product extends Model
     protected $casts = [
         'is_active'      => 'boolean',
         'is_custom'      => 'boolean',
+        'show_ref_images' => 'boolean',
         'price'          => 'float',
         'compare_price'  => 'float',
         'wholesale_price' => 'float',
