@@ -20,10 +20,12 @@ use App\Http\Controllers\Admin\ExternalSaleController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\LedgerController;
 use App\Http\Controllers\Admin\ProfitReportController;
+use App\Http\Controllers\Admin\PortfolioController;
 use App\Http\Controllers\Admin\PricingController;
 use App\Http\Controllers\Admin\ProductSpecFieldController;
 use App\Http\Controllers\Admin\SiteSettingController;
 use App\Http\Controllers\Admin\SpecTemplateController;
+use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
@@ -110,6 +112,22 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/hero-slides/{heroSlide}/image',  [HeroSlideController::class, 'destroyImage'])->name('heroSlides.destroyImage');
     Route::post('/hero-slides/reorder',              [HeroSlideController::class, 'reorder'])     ->name('heroSlides.reorder');
     Route::delete('/hero-slides/{heroSlide}',        [HeroSlideController::class, 'destroy'])     ->name('heroSlides.destroy');
+
+    // Portfolio (معرض الأعمال)
+    Route::get('/portfolio',                          [PortfolioController::class, 'index'])       ->name('portfolio.index');
+    Route::post('/portfolio',                         [PortfolioController::class, 'store'])       ->name('portfolio.store');
+    Route::post('/portfolio/{portfolioProject}',      [PortfolioController::class, 'update'])      ->name('portfolio.update');
+    Route::delete('/portfolio/{portfolioProject}/image', [PortfolioController::class, 'destroyImage'])->name('portfolio.destroyImage');
+    Route::delete('/portfolio/{portfolioProject}/video', [PortfolioController::class, 'destroyVideo'])->name('portfolio.destroyVideo');
+    Route::delete('/portfolio/{portfolioProject}',    [PortfolioController::class, 'destroy'])     ->name('portfolio.destroy');
+
+    // Testimonials (آراء الزبائن)
+    Route::get('/testimonials',                       [TestimonialController::class, 'index'])     ->name('testimonials.index');
+    Route::post('/testimonials',                      [TestimonialController::class, 'store'])     ->name('testimonials.store');
+    Route::post('/testimonials/{testimonial}',        [TestimonialController::class, 'update'])    ->name('testimonials.update');
+    Route::delete('/testimonials/{testimonial}/image', [TestimonialController::class, 'destroyImage'])->name('testimonials.destroyImage');
+    Route::delete('/testimonials/{testimonial}/video', [TestimonialController::class, 'destroyVideo'])->name('testimonials.destroyVideo');
+    Route::delete('/testimonials/{testimonial}',      [TestimonialController::class, 'destroy'])   ->name('testimonials.destroy');
 
     // Orders
     Route::get('/orders',                 [OrderController::class, 'index'])         ->name('orders.index');

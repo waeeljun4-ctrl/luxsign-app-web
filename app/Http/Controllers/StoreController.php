@@ -5,19 +5,25 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\DiscountCampaign;
 use App\Models\HeroSlide;
+use App\Models\PortfolioProject;
 use App\Models\Product;
+use App\Models\Testimonial;
 use Inertia\Inertia;
 
 class StoreController extends Controller
 {
     public function portfolio()
     {
-        return Inertia::render('Portfolio');
+        return Inertia::render('Portfolio', [
+            'projects' => PortfolioProject::active()->get(),
+        ]);
     }
 
     public function testimonials()
     {
-        return Inertia::render('Testimonials');
+        return Inertia::render('Testimonials', [
+            'reviews' => Testimonial::active()->get(),
+        ]);
     }
 
     public function index()

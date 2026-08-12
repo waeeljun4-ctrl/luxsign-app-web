@@ -7,6 +7,8 @@ const navItems = [
     { href: '/admin/spec-templates', label: 'قوالب المواصفات', icon: '🧩' },
     { href: '/admin/categories',   label: 'الأصناف',     icon: '🗂️' },
     { href: '/admin/hero-slides',  label: 'السلايدر',    icon: '🎞️' },
+    { href: '/admin/portfolio',    label: 'معرض الأعمال', icon: '🖼️' },
+    { href: '/admin/testimonials', label: 'آراء الزبائن', icon: '⭐' },
     { href: '/admin/pricing',      label: 'التسعير',     icon: '💰' },
     { href: '/admin/coupons',      label: 'الكوبونات',   icon: '🎟️' },
     { href: '/admin/discounts',    label: 'حملات الخصم', icon: '🏷️' },
