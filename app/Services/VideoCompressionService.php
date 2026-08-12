@@ -50,7 +50,12 @@ class VideoCompressionService
             $video->save($format, $tempPath);
 
             $path = $directory.'/'.Str::random(40).'.mp4';
-            Storage::disk($disk)->put($path, file_get_contents($tempPath));
+            // Stream the file to storage instead of file_get_contents() — a
+            // compressed video can easily exceed PHP's memory_limit if read
+            // fully into a string first.
+            $stream = fopen($tempPath, 'r');
+            Storage::disk($disk)->put($path, $stream);
+            if (is_resource($stream)) fclose($stream);
 
             return $path;
         } finally {

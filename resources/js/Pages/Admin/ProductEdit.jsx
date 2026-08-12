@@ -91,12 +91,17 @@ export default function ProductEdit({ product, categories, specFields, specTempl
     const isNew = !product;
     const imgRef = useRef(null);
     const vidRef = useRef(null);
+    const galleryRef = useRef(null);
     const [imgPreview, setImgPreview]     = useState(null);
     const [vidPreview, setVidPreview]     = useState(null);
     const [vidFileName, setVidFileName]   = useState(null);
     const [uploadProgress, setUploadProgress] = useState(null);
     const [deletingImg, setDeletingImg]   = useState(false);
     const [deletingVid, setDeletingVid]   = useState(false);
+    const [deletingGalleryIdx, setDeletingGalleryIdx] = useState(null);
+    const [newGalleryFiles, setNewGalleryFiles] = useState([]);
+    const [newGalleryPreviews, setNewGalleryPreviews] = useState([]);
+    const MAX_GALLERY = 10;
 
     const { data, setData, post, processing, errors, transform } = useForm({
         category_id:    product?.category_id ?? '',
@@ -108,6 +113,8 @@ export default function ProductEdit({ product, categories, specFields, specTempl
         description_en: product?.description_en ?? '',
         icon:           product?.icon ?? '',
         badge:          product?.badge ?? '',
+        badge_he:       product?.badge_he ?? '',
+        badge_en:       product?.badge_en ?? '',
         is_custom:      product?.is_custom ?? false,
         pricing_type:   product?.pricing_type ?? 'fixed',
         price:          product?.price ?? '',
@@ -117,12 +124,15 @@ export default function ProductEdit({ product, categories, specFields, specTempl
         size_prices:    product?.size_prices ?? [],
         compare_prices: product?.compare_prices ?? [],
         qty_labels:     product?.qty_labels ?? [],
+        qty_labels_he:  product?.qty_labels_he ?? [],
+        qty_labels_en:  product?.qty_labels_en ?? [],
         fixed_size_label: product?.fixed_size_label ?? '',
         shape:          product?.shape ?? 'rectangle',
         designer_type:  product?.designer_type ?? 'none',
         is_active:      product?.is_active ?? true,
         sort_order:     product?.sort_order ?? 0,
         image:          null,
+        new_images:     [],
         video:          null,
         video_url:      product?.video_url ?? '',
     });
@@ -147,9 +157,11 @@ export default function ProductEdit({ product, categories, specFields, specTempl
         product?.pricing_type === 'plate_qty' && product?.preset_sizes?.length
             ? product.preset_sizes.map((price, i) => ({
                 label: product.qty_labels?.[i] ?? '',
+                labelHe: product.qty_labels_he?.[i] ?? '',
+                labelEn: product.qty_labels_en?.[i] ?? '',
                 price,
             }))
-            : [{ label: '', price: '' }]
+            : [{ label: '', labelHe: '', labelEn: '', price: '' }]
     ));
 
     useEffect(() => {
@@ -164,6 +176,8 @@ export default function ProductEdit({ product, categories, specFields, specTempl
         if (data.pricing_type !== 'plate_qty') return;
         setData('preset_sizes', qtyRows.map(r => r.price));
         setData('qty_labels', qtyRows.map(r => r.label));
+        setData('qty_labels_he', qtyRows.map(r => r.labelHe));
+        setData('qty_labels_en', qtyRows.map(r => r.labelEn));
         setData('price', qtyRows[0]?.price || 0);
     }, [qtyRows, data.pricing_type]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -180,6 +194,35 @@ export default function ProductEdit({ product, categories, specFields, specTempl
         setData('video', file);
         setVidPreview(URL.createObjectURL(file));
         setVidFileName(file.name);
+    }
+
+    function handleGalleryChange(e) {
+        const files = Array.from(e.target.files || []);
+        e.target.value = '';
+        if (!files.length) return;
+        const room = MAX_GALLERY - (product?.images?.length ?? 0) - newGalleryFiles.length;
+        const accepted = files.slice(0, Math.max(0, room));
+        const updated = [...newGalleryFiles, ...accepted];
+        setNewGalleryFiles(updated);
+        setNewGalleryPreviews(prev => [...prev, ...accepted.map(f => URL.createObjectURL(f))]);
+        setData('new_images', updated);
+    }
+
+    function removeNewGalleryFile(i) {
+        const updated = newGalleryFiles.filter((_, idx) => idx !== i);
+        setNewGalleryFiles(updated);
+        setNewGalleryPreviews(prev => prev.filter((_, idx) => idx !== i));
+        setData('new_images', updated);
+    }
+
+    function deleteGalleryImage(index) {
+        confirmAction('حذف هاي الصورة من المعرض؟', (cb) => {
+            setDeletingGalleryIdx(index);
+            router.delete(route('admin.products.destroyGalleryImage', [product.id, index]), {
+                ...cb,
+                onFinish: () => { setDeletingGalleryIdx(null); cb.onFinish(); },
+            });
+        });
     }
 
     function deleteImage() {
@@ -219,6 +262,9 @@ export default function ProductEdit({ product, categories, specFields, specTempl
                 setVidPreview(null);
                 setVidFileName(null);
                 setImgPreview(null);
+                setNewGalleryFiles([]);
+                setNewGalleryPreviews([]);
+                setData('new_images', []);
                 if (isNew) router.visit(route('admin.products.index'));
             },
             onError: () => setUploadProgress(null),
@@ -312,6 +358,43 @@ export default function ProductEdit({ product, categories, specFields, specTempl
                                 {errors.image && (
                                     <p className="text-xs text-red-500 mt-1">{errors.image}</p>
                                 )}
+                            </div>
+
+                            {/* معرض الصور (اختياري) */}
+                            <div className="bg-white rounded-2xl border border-cream-3 p-4">
+                                <p className="font-black text-ink text-sm mb-1">🖼️ معرض الصور (اختياري)</p>
+                                <p className="text-xs text-muted mb-3">صور إضافية تظهر بمعرض تفاصيل المنتج، فوق صورة الغلاف — حتى {MAX_GALLERY} صور.</p>
+
+                                <div className="flex flex-wrap gap-2 mb-2">
+                                    {(product?.images ?? []).map((path, i) => (
+                                        <div key={path} className="relative w-20 h-20">
+                                            <img src={`/storage/${path}`} className="w-20 h-20 object-cover rounded-xl border border-cream-3" />
+                                            <button type="button" onClick={() => deleteGalleryImage(i)} disabled={deletingGalleryIdx === i}
+                                                className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center leading-none disabled:opacity-50">
+                                                {deletingGalleryIdx === i ? '⏳' : '✕'}
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {newGalleryPreviews.map((src, i) => (
+                                        <div key={src} className="relative w-20 h-20">
+                                            <img src={src} className="w-20 h-20 object-cover rounded-xl border-2 border-green-400" />
+                                            <button type="button" onClick={() => removeNewGalleryFile(i)}
+                                                className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center leading-none">✕</button>
+                                        </div>
+                                    ))}
+                                    {((product?.images?.length ?? 0) + newGalleryFiles.length) < MAX_GALLERY && (
+                                        <label onClick={() => galleryRef.current.click()}
+                                            className="w-20 h-20 flex flex-col items-center justify-center gap-0.5 border-2 border-dashed border-cream-3 rounded-xl cursor-pointer text-muted hover:border-gold hover:text-gold transition-colors">
+                                            <span className="text-xl leading-none">📷</span>
+                                            <span className="text-[10px] font-bold">إضافة</span>
+                                        </label>
+                                    )}
+                                </div>
+                                <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryChange} />
+                                {newGalleryFiles.length > 0 && (
+                                    <p className="text-xs text-green-600 font-bold">✅ {newGalleryFiles.length} صورة جاهزة للرفع — رح تنحفظ لما تضغط "حفظ"</p>
+                                )}
+                                {errors.new_images && <p className="text-xs text-red-500 mt-1">{errors.new_images}</p>}
                             </div>
 
                             {/* فيديو المنتج */}
@@ -435,6 +518,12 @@ export default function ProductEdit({ product, categories, specFields, specTempl
                                 <Textarea label="الوصف بالإنجليزي 🌍" value={data.description_en}
                                     onChange={e => setData('description_en', e.target.value)}
                                     placeholder="Short product description in English..." />
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Input label="الشارة بالعبري ✡" value={data.badge_he}
+                                        onChange={e => setData('badge_he', e.target.value)} placeholder="הכי מבוקש" />
+                                    <Input label="الشارة بالإنجليزي 🌍" value={data.badge_en}
+                                        onChange={e => setData('badge_en', e.target.value)} placeholder="Best seller" />
+                                </div>
                             </div>
 
                             {/* نوع المنتج */}
@@ -559,12 +648,15 @@ export default function ProductEdit({ product, categories, specFields, specTempl
 
                                 {data.pricing_type === 'plate_qty' && (
                                     <Field label="الكميات والأسعار">
+                                        <p className="text-xs text-muted -mt-1 mb-1">التسمية بالعبري/الإنجليزي اختيارية — إذا تُركت فارغة يُعرض التسمية العربية.</p>
                                         <RepeatingRows
                                             rows={qtyRows}
                                             onChange={setQtyRows}
                                             addLabel="+ إضافة كمية"
                                             columns={[
                                                 { key: 'label', placeholder: 'التسمية (مثال: قطعة واحدة)' },
+                                                { key: 'labelHe', placeholder: 'بالعبري ✡ (اختياري)' },
+                                                { key: 'labelEn', placeholder: 'بالإنجليزي 🌍 (اختياري)' },
                                                 { key: 'price', placeholder: 'السعر (₪)', type: 'number', width: 'w-28' },
                                             ]}
                                         />
@@ -710,8 +802,12 @@ function SpecFieldForm({ product, field, onDone }) {
     const isEdit = !!field;
     const { data, setData, post, put, processing, errors, reset, transform } = useForm({
         label: field?.label || '',
+        label_he: field?.label_he || '',
+        label_en: field?.label_en || '',
         field_type: field?.field_type || 'text',
         options: (field?.options || []).join(', '),
+        options_he: (field?.options_he || []).join(', '),
+        options_en: (field?.options_en || []).join(', '),
         is_required: field?.is_required || false,
     });
 
@@ -719,6 +815,12 @@ function SpecFieldForm({ product, field, onDone }) {
         ...d,
         options: d.field_type === 'select'
             ? d.options.split(',').map(s => s.trim()).filter(Boolean)
+            : null,
+        options_he: d.field_type === 'select' && d.options_he
+            ? d.options_he.split(',').map(s => s.trim()).filter(Boolean)
+            : null,
+        options_en: d.field_type === 'select' && d.options_en
+            ? d.options_en.split(',').map(s => s.trim()).filter(Boolean)
             : null,
     }));
 
@@ -740,9 +842,23 @@ function SpecFieldForm({ product, field, onDone }) {
                     {SPEC_FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </Select>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+                <Input label="اسم الحقل بالعبري ✡ (اختياري)" value={data.label_he}
+                    onChange={e => setData('label_he', e.target.value)} placeholder="למשל: סוג תאורה" />
+                <Input label="اسم الحقل بالإنجليزي 🌍 (اختياري)" value={data.label_en}
+                    onChange={e => setData('label_en', e.target.value)} placeholder="e.g. Lighting type" />
+            </div>
             {data.field_type === 'select' && (
-                <Input label="الخيارات (افصل بفاصلة)" value={data.options} onChange={e => setData('options', e.target.value)}
-                    error={errors.options} placeholder="أبيض, أصفر دافئ, RGB متعدد" />
+                <>
+                    <Input label="الخيارات (افصل بفاصلة)" value={data.options} onChange={e => setData('options', e.target.value)}
+                        error={errors.options} placeholder="أبيض, أصفر دافئ, RGB متعدد" />
+                    <div className="grid grid-cols-2 gap-3">
+                        <Input label="الخيارات بالعبري ✡ (اختياري — بنفس الترتيب)" value={data.options_he}
+                            onChange={e => setData('options_he', e.target.value)} placeholder="לבן, צהוב חם, RGB" />
+                        <Input label="الخيارات بالإنجليزي 🌍 (اختياري — بنفس الترتيب)" value={data.options_en}
+                            onChange={e => setData('options_en', e.target.value)} placeholder="White, Warm yellow, RGB" />
+                    </div>
+                </>
             )}
             <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={data.is_required} onChange={e => setData('is_required', e.target.checked)} className="accent-gold" />

@@ -90,9 +90,13 @@ class ProductController extends Controller
             'description_en' => 'nullable|string|max:500',
             'icon'           => 'nullable|string|max:10',
             'image'          => 'nullable|image|max:10240',
+            'new_images'     => 'nullable|array|max:10',
+            'new_images.*'   => 'image|max:10240',
             'video'          => 'nullable|mimetypes:video/mp4,video/quicktime,video/x-msvideo,video/webm|max:2097152',
             'video_url'      => 'nullable|max:500',
             'badge'          => 'nullable|string|max:30',
+            'badge_he'       => 'nullable|string|max:30',
+            'badge_en'       => 'nullable|string|max:30',
             'pricing_type'   => 'required|in:fixed,sqm,plate_pair,plate_single,pair_width,single_width,plate_qty,fixed_per_size,fixed_qty',
             'is_custom'      => 'boolean',
             'price'          => 'required|numeric|min:0',
@@ -102,6 +106,8 @@ class ProductController extends Controller
             'size_prices'    => 'nullable',
             'compare_prices' => 'nullable',
             'qty_labels'     => 'nullable',
+            'qty_labels_he'  => 'nullable',
+            'qty_labels_en'  => 'nullable',
             'shape'          => 'nullable|in:rectangle,circle',
             'max_size'       => 'nullable|integer|min:0',
             'fixed_size_label' => 'nullable|string|max:255',
@@ -117,6 +123,8 @@ class ProductController extends Controller
         $data['size_prices']    = $this->parseNumArray($data['size_prices'] ?? null);
         $data['compare_prices'] = $this->parseNumArray($data['compare_prices'] ?? null);
         $data['qty_labels']     = $this->parseStrArray($data['qty_labels'] ?? null);
+        $data['qty_labels_he']  = $this->parseStrArray($data['qty_labels_he'] ?? null);
+        $data['qty_labels_en']  = $this->parseStrArray($data['qty_labels_en'] ?? null);
         return $data;
     }
 
@@ -133,6 +141,13 @@ class ProductController extends Controller
         if ($request->hasFile('video')) {
             $data['video'] = $videoCompressor->compressAndStore($request->file('video'), 'products/videos');
         }
+        if ($request->hasFile('new_images')) {
+            $data['images'] = array_map(
+                fn ($file) => $imageCompressor->compressAndStore($file, 'products'),
+                $request->file('new_images')
+            );
+        }
+        unset($data['new_images']);
 
         Product::create($data);
         return back()->with('success', 'تم إضافة المنتج ✅');
@@ -152,9 +167,28 @@ class ProductController extends Controller
             if ($product->video) Storage::disk('public')->delete($product->video);
             $data['video'] = $videoCompressor->compressAndStore($request->file('video'), 'products/videos');
         }
+        if ($request->hasFile('new_images')) {
+            $newPaths = array_map(
+                fn ($file) => $imageCompressor->compressAndStore($file, 'products'),
+                $request->file('new_images')
+            );
+            $data['images'] = [...($product->images ?? []), ...$newPaths];
+        }
+        unset($data['new_images']);
 
         $product->update($data);
         return back()->with('success', 'تم تحديث المنتج ✅');
+    }
+
+    public function destroyGalleryImage(Product $product, int $index)
+    {
+        $images = $product->images ?? [];
+        if (isset($images[$index])) {
+            Storage::disk('public')->delete($images[$index]);
+            unset($images[$index]);
+            $product->update(['images' => array_values($images)]);
+        }
+        return back()->with('success', 'تم حذف الصورة');
     }
 
     public function destroyImage(Product $product)
@@ -188,6 +222,7 @@ class ProductController extends Controller
     {
         if ($product->image) Storage::disk('public')->delete($product->image);
         if ($product->video) Storage::disk('public')->delete($product->video);
+        foreach ($product->images ?? [] as $path) Storage::disk('public')->delete($path);
         $product->delete();
         return back()->with('success', 'تم حذف المنتج');
     }

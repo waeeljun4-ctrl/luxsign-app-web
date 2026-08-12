@@ -37,7 +37,7 @@ export default function CartDrawer() {
             setCoupon({ code: myCoupon.code, discount: data.discount, message: data.message });
             setMyCoupon(null);
         } catch (e) {
-            showToast(e.response?.data?.message || 'كود الخصم غير صالح');
+            showToast(e.response?.data?.message || t('invalidCoupon'));
         }
         setCouponChecking(false);
     }
@@ -50,7 +50,7 @@ export default function CartDrawer() {
             setCoupon({ code: couponCode.trim(), discount: data.discount, message: data.message });
         } catch (e) {
             setCoupon(null);
-            showToast(e.response?.data?.message || 'كود الخصم غير صالح');
+            showToast(e.response?.data?.message || t('invalidCoupon'));
         }
         setCouponChecking(false);
     }
@@ -90,7 +90,7 @@ export default function CartDrawer() {
 
             const { data } = await axios.post('/api/orders', payload, { headers: { 'Content-Type': 'multipart/form-data' } });
             if (data.account_created) {
-                showToast(`${t('successOrder')} — أنشأنا لك حساب تلقائياً، رقم هاتفك هو كلمة السر لتسجيل الدخول لاحقاً 🔑`, 7000);
+                showToast(`${t('successOrder')} — ${t('accountCreatedNote')}`, 7000);
             } else {
                 showToast(t('successOrder'));
             }
@@ -107,7 +107,7 @@ export default function CartDrawer() {
     function orderViaWA() {
         if (!items.length) return;
         const lines = items.map(i => i.isCustom
-            ? `- ${i.name} (${i.qty}x) = سيتم تحديد السعر`
+            ? `- ${i.name} (${i.qty}x) = ${t('waPriceTBD')}`
             : `- ${i.name} (${i.qty}x) = ${i.price * i.qty}₪`).join('\n');
         const nameLine  = form.name    ? t('waName')(form.name)       : '';
         const phoneLine = form.phone   ? t('waPhone')(form.phone)     : '';
@@ -181,7 +181,7 @@ export default function CartDrawer() {
 
                             {customItems.length > 0 && (
                                 <>
-                                    <p className="text-xs font-bold tracking-widest uppercase text-muted mt-3 mb-1">🎨 طلبات تفصيل — بانتظار التسعير</p>
+                                    <p className="text-xs font-bold tracking-widest uppercase text-muted mt-3 mb-1">{t('customOrdersPendingHeading')}</p>
                                     {customItems.map((item, i) => (
                                         <div key={`c-${i}`} className="flex gap-3 py-3 border-b border-cream-3 dark:border-white/10 items-start">
                                             {item.imagePreviews?.length ? (
@@ -202,7 +202,7 @@ export default function CartDrawer() {
                                                         {item.specs.map(s => `${s.label}: ${s.value}`).join(' · ')}
                                                     </p>
                                                 )}
-                                                <p className="text-xs font-bold text-gold mt-1">💬 غير مسعّر بعد</p>
+                                                <p className="text-xs font-bold text-gold mt-1">{t('notPricedYet')}</p>
                                             </div>
                                             <button onClick={() => removeItem(item.name)} className="text-gray-300 hover:text-red-500 text-sm transition-colors">✕</button>
                                         </div>
@@ -247,20 +247,20 @@ export default function CartDrawer() {
                         {/* Coupon */}
                         {coupon ? (
                             <div className="flex items-center justify-between bg-gold-pale rounded-lg px-3 py-2">
-                                <span className="text-xs font-bold text-gold">🎟️ {coupon.code} — خصم {coupon.discount}₪</span>
+                                <span className="text-xs font-bold text-gold">{t('couponAppliedLabel')(coupon.code, coupon.discount)}</span>
                                 <button onClick={removeCoupon} className="text-xs text-muted hover:text-red-500">✕</button>
                             </div>
                         ) : (
                             <div className="flex gap-2">
                                 <input
                                     className="flex-1 px-3 py-2 border-2 border-cream-3 dark:border-white/10 focus:border-gold rounded-lg text-sm font-cairo text-ink dark:text-cream bg-cream dark:bg-ink outline-none"
-                                    placeholder="كود الخصم (اختياري)"
+                                    placeholder={t('couponPlaceholder')}
                                     value={couponCode}
                                     onChange={e => setCouponCode(e.target.value.toUpperCase())}
                                 />
                                 <button onClick={applyCoupon} disabled={couponChecking || !couponCode.trim()}
                                     className="px-4 bg-cream-2 dark:bg-ink-2 border-2 border-cream-3 dark:border-white/10 rounded-lg text-xs font-bold text-ink dark:text-cream hover:border-gold transition-colors disabled:opacity-50">
-                                    {couponChecking ? '⏳' : 'تطبيق'}
+                                    {couponChecking ? '⏳' : t('apply')}
                                 </button>
                             </div>
                         )}
@@ -275,7 +275,7 @@ export default function CartDrawer() {
                         </div>
                         {customItems.length > 0 && (
                             <p className="text-[11px] text-muted -mt-1.5">
-                                + {customItems.length} منتج تفصيل رح نحدد سعره ونتواصل معك فيه بعد استلام طلبك
+                                {t('customItemsNote')(customItems.length)}
                             </p>
                         )}
 

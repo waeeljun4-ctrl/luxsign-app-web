@@ -78,6 +78,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/products/{product}',          [ProductController::class, 'destroy'])      ->name('products.destroy');
     Route::delete('/products/{product}/image',    [ProductController::class, 'destroyImage']) ->name('products.destroyImage');
     Route::delete('/products/{product}/video',    [ProductController::class, 'destroyVideo']) ->name('products.destroyVideo');
+    Route::delete('/products/{product}/gallery/{index}', [ProductController::class, 'destroyGalleryImage'])->name('products.destroyGalleryImage');
 
     // Spec templates (reusable, copy-on-attach custom fields per product)
     Route::get('/spec-templates',                              [SpecTemplateController::class, 'index'])       ->name('specTemplates.index');

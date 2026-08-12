@@ -12,9 +12,9 @@ class Product extends Model
     protected $fillable = [
         'category_id', 'name', 'name_he', 'name_en',
         'description', 'description_he', 'description_en',
-        'icon', 'image', 'video_url', 'video', 'badge',
+        'icon', 'image', 'images', 'video_url', 'video', 'badge', 'badge_he', 'badge_en',
         'pricing_type', 'is_custom', 'price', 'compare_price', 'min_price', 'show_min_price', 'preset_sizes',
-        'size_prices', 'compare_prices', 'max_size', 'fixed_size_label', 'qty_labels', 'shape',
+        'size_prices', 'compare_prices', 'max_size', 'fixed_size_label', 'qty_labels', 'qty_labels_he', 'qty_labels_en', 'shape',
         'designer_type', 'is_active', 'sort_order',
         'track_stock', 'stock_quantity', 'wholesale_price',
     ];
@@ -28,9 +28,12 @@ class Product extends Model
         'min_price'      => 'float',
         'show_min_price' => 'boolean',
         'preset_sizes'   => 'array',
+        'images'         => 'array',
         'size_prices'    => 'array',
         'compare_prices' => 'array',
         'qty_labels'     => 'array',
+        'qty_labels_he'  => 'array',
+        'qty_labels_en'  => 'array',
         'track_stock'    => 'boolean',
         'stock_quantity' => 'integer',
     ];

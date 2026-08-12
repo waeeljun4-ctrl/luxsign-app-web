@@ -152,17 +152,28 @@ export function PricingLabel({ type }) {
     );
 }
 
-export function StatusBadge({ status }) {
-    const config = {
-        pending:     { label: 'جديد',       color: 'bg-yellow-100 text-yellow-700' },
-        confirmed:   { label: 'مؤكد',       color: 'bg-blue-100 text-blue-700' },
-        in_progress: { label: 'قيد التنفيذ', color: 'bg-purple-100 text-purple-700' },
-        ready:       { label: 'جاهز',        color: 'bg-green-100 text-green-700' },
-        delivered:   { label: 'مسلّم',       color: 'bg-gray-100 text-gray-600' },
-        cancelled:   { label: 'ملغي',        color: 'bg-red-100 text-red-600' },
-    };
-    const c = config[status] || config.pending;
+// Labels default to Arabic (admin dashboard has no locale switcher and isn't
+// wrapped in LocaleProvider) — pass `locale` only from customer-facing pages
+// that are inside a LocaleProvider, e.g. Account/Orders.jsx.
+const STATUS_LABELS = {
+    ar: { pending: 'جديد', confirmed: 'مؤكد', in_progress: 'قيد التنفيذ', ready: 'جاهز', delivered: 'مسلّم', cancelled: 'ملغي' },
+    he: { pending: 'חדש', confirmed: 'אושר', in_progress: 'בביצוע', ready: 'מוכן', delivered: 'נמסר', cancelled: 'בוטל' },
+    en: { pending: 'New', confirmed: 'Confirmed', in_progress: 'In Progress', ready: 'Ready', delivered: 'Delivered', cancelled: 'Cancelled' },
+};
+const STATUS_COLORS = {
+    pending: 'bg-yellow-100 text-yellow-700',
+    confirmed: 'bg-blue-100 text-blue-700',
+    in_progress: 'bg-purple-100 text-purple-700',
+    ready: 'bg-green-100 text-green-700',
+    delivered: 'bg-gray-100 text-gray-600',
+    cancelled: 'bg-red-100 text-red-600',
+};
+
+export function StatusBadge({ status, locale = 'ar' }) {
+    const labels = STATUS_LABELS[locale] ?? STATUS_LABELS.ar;
+    const label = labels[status] ?? labels.pending;
+    const color = STATUS_COLORS[status] ?? STATUS_COLORS.pending;
     return (
-        <span className={`text-xs font-bold px-2 py-1 rounded-full ${c.color}`}>{c.label}</span>
+        <span className={`text-xs font-bold px-2 py-1 rounded-full ${color}`}>{label}</span>
     );
 }

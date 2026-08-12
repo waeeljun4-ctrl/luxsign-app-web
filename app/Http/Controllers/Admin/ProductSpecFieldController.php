@@ -26,8 +26,12 @@ class ProductSpecFieldController extends Controller
             $nextSort++;
             $product->specFields()->create([
                 'label' => $field->label,
+                'label_he' => $field->label_he,
+                'label_en' => $field->label_en,
                 'field_type' => $field->field_type,
                 'options' => $field->options,
+                'options_he' => $field->options_he,
+                'options_en' => $field->options_en,
                 'is_required' => false,
                 'sort_order' => $nextSort,
             ]);
@@ -65,9 +69,15 @@ class ProductSpecFieldController extends Controller
     {
         return $request->validate([
             'label' => 'required|string|max:100',
+            'label_he' => 'nullable|string|max:100',
+            'label_en' => 'nullable|string|max:100',
             'field_type' => 'required|in:text,number,select,boolean',
             'options' => 'nullable|array',
             'options.*' => 'string|max:100',
+            'options_he' => 'nullable|array',
+            'options_he.*' => 'nullable|string|max:100',
+            'options_en' => 'nullable|array',
+            'options_en.*' => 'nullable|string|max:100',
             'is_required' => 'boolean',
         ]);
     }

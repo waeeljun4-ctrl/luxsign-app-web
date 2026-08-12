@@ -1,23 +1,25 @@
 import { Head, Link } from '@inertiajs/react';
 import { StatusBadge } from '../../Components/UI';
+import { LocaleProvider, useLocale } from '../../Components/LocaleContext';
 
-export default function Orders({ orders }) {
+function OrdersContent({ orders }) {
+    const { locale, t } = useLocale();
     return (
         <>
-            <Head title="طلبياتي" />
+            <Head title={t('myOrders')} />
             <div className="min-h-screen bg-cream dark:bg-ink font-cairo">
                 <div className="max-w-2xl mx-auto px-4 py-8">
                     <div className="flex items-center justify-between mb-6">
-                        <h1 className="text-xl font-black text-ink dark:text-cream">📦 طلبياتي</h1>
+                        <h1 className="text-xl font-black text-ink dark:text-cream">{t('myOrders')}</h1>
                         <Link href="/" className="text-xs font-bold text-muted hover:text-gold transition-colors">
-                            ← العودة للمتجر
+                            {t('backToStore')}
                         </Link>
                     </div>
 
                     {orders.length === 0 ? (
                         <div className="bg-white dark:bg-ink-2 rounded-2xl border border-cream-3 dark:border-white/10 text-center py-16">
                             <div className="text-4xl mb-3">🛒</div>
-                            <p className="text-sm text-muted">ما في طلبيات بعد</p>
+                            <p className="text-sm text-muted">{t('noOrdersYet')}</p>
                         </div>
                     ) : (
                         <div className="space-y-3">
@@ -26,10 +28,10 @@ export default function Orders({ orders }) {
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
                                             <span className="font-black text-sm text-ink dark:text-cream">#{order.id}</span>
-                                            <StatusBadge status={order.status} />
+                                            <StatusBadge status={order.status} locale={locale} />
                                         </div>
                                         <span className="text-xs text-muted">
-                                            {new Date(order.created_at).toLocaleDateString('ar-PS')}
+                                            {new Date(order.created_at).toLocaleDateString(t('dateLocale'))}
                                         </span>
                                     </div>
 
@@ -61,7 +63,7 @@ export default function Orders({ orders }) {
                                     </div>
 
                                     <div className="flex items-center justify-between pt-2 border-t border-cream-3 dark:border-white/10">
-                                        <span className="text-xs font-bold text-muted">الإجمالي</span>
+                                        <span className="text-xs font-bold text-muted">{t('orderTotal')}</span>
                                         <span className="font-black text-gold">{order.total}₪</span>
                                     </div>
                                 </div>
@@ -71,5 +73,13 @@ export default function Orders({ orders }) {
                 </div>
             </div>
         </>
+    );
+}
+
+export default function Orders({ orders }) {
+    return (
+        <LocaleProvider>
+            <OrdersContent orders={orders} />
+        </LocaleProvider>
     );
 }

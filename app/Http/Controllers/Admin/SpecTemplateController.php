@@ -61,9 +61,15 @@ class SpecTemplateController extends Controller
     {
         return $request->validate([
             'label' => 'required|string|max:100',
+            'label_he' => 'nullable|string|max:100',
+            'label_en' => 'nullable|string|max:100',
             'field_type' => 'required|in:text,number,select,boolean',
             'options' => 'nullable|array',
             'options.*' => 'string|max:100',
+            'options_he' => 'nullable|array',
+            'options_he.*' => 'nullable|string|max:100',
+            'options_en' => 'nullable|array',
+            'options_en.*' => 'nullable|string|max:100',
         ]);
     }
 }

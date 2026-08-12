@@ -29,9 +29,10 @@ function ThemeToggle() {
 
 function AdminLink() {
     const { auth } = usePage().props;
+    const { t } = useLocale();
     if (auth?.user?.role !== 'admin') return null;
     return (
-        <a href={route('admin.dashboard')} title="لوحة التحكم"
+        <a href={route('admin.dashboard')} title={t('dashboardTooltip')}
             className="w-9 h-9 rounded-xl bg-cream-2 dark:bg-ink-2 border border-cream-3 dark:border-white/10 flex items-center justify-center text-sm text-ink dark:text-cream hover:bg-gold-pale hover:border-gold hover:text-gold transition-colors shrink-0">
             ⚙️
         </a>
@@ -40,12 +41,13 @@ function AdminLink() {
 
 function AccountLink() {
     const { auth } = usePage().props;
+    const { t } = useLocale();
     const [open, setOpen] = useState(false);
     const user = auth?.user;
 
     if (!user) {
         return (
-            <a href="/login" title="تسجيل الدخول"
+            <a href="/login" title={t('loginTooltip')}
                 className="w-9 h-9 rounded-xl bg-cream-2 dark:bg-ink-2 border border-cream-3 dark:border-white/10 flex items-center justify-center text-sm text-ink dark:text-cream hover:bg-gold-pale hover:border-gold hover:text-gold transition-colors shrink-0">
                 👤
             </a>
@@ -69,11 +71,11 @@ function AccountLink() {
                         </div>
                         <Link href="/my-orders"
                             className="block w-full text-right px-3.5 py-2.5 text-sm font-bold text-ink dark:text-cream hover:bg-cream-2 dark:hover:bg-ink transition-colors border-b border-cream-3 dark:border-white/10">
-                            📦 طلبياتي
+                            {t('myOrders')}
                         </Link>
                         <Link href="/logout" method="post" as="button"
                             className="w-full text-right px-3.5 py-2.5 text-sm font-bold text-red-500 hover:bg-cream-2 dark:hover:bg-ink transition-colors">
-                            🚪 تسجيل الخروج
+                            {t('logout')}
                         </Link>
                     </div>
                 </>
@@ -123,6 +125,14 @@ const HERO_GRADIENTS = [
     'from-gold via-[#3E4F6B] to-ink-2',
     'from-ink-2 via-ink to-[#26344A]',
 ];
+// Soft blurred glow orbs layered behind the text on plain-gradient slides —
+// same "depth" trick as the product photography, just in the brand's own
+// dark palette instead of switching to a lighter base.
+const HERO_ORBS = [
+    ['bg-gold-light/25', 'bg-white/10'],
+    ['bg-white/15', 'bg-gold-light/20'],
+    ['bg-gold-light/20', 'bg-white/10'],
+];
 
 function HeroSlider({ slides }) {
     const { locale, dict } = useLocale();
@@ -146,17 +156,29 @@ function HeroSlider({ slides }) {
                     const title = localField(s, 'title', locale);
                     const subtitle = localField(s, 'subtitle', locale);
                     const ctaText = localField(s, 'cta_text', locale);
+                    const [orb1, orb2] = HERO_ORBS[i % HERO_ORBS.length];
                     return (
                         <div key={s.id} dir={dict.dir}
                             style={s.image ? { backgroundImage: `linear-gradient(to bottom right, rgba(27,36,49,.8), rgba(27,36,49,.6)), url(/storage/${s.image})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
-                            className={`w-full shrink-0 px-6 py-16 sm:py-24 text-center ${s.image ? '' : `bg-gradient-to-br ${HERO_GRADIENTS[i % HERO_GRADIENTS.length]}`}`}>
-                            <h2 className="text-2xl sm:text-4xl font-black text-white mb-3">{title}</h2>
-                            {subtitle && <p className="text-sm sm:text-base text-white/70 max-w-md mx-auto mb-6 leading-relaxed">{subtitle}</p>}
-                            {ctaText && (
-                                s.cta_link
-                                    ? <a href={s.cta_link} className="inline-block bg-gold text-white font-bold px-6 py-2.5 rounded-xl hover:bg-white hover:text-ink transition-colors">{ctaText}</a>
-                                    : <span className="inline-block bg-gold text-white font-bold px-6 py-2.5 rounded-xl">{ctaText}</span>
+                            className={`relative w-full shrink-0 px-6 py-16 sm:py-24 text-center overflow-hidden ${s.image ? '' : `bg-gradient-to-br ${HERO_GRADIENTS[i % HERO_GRADIENTS.length]}`}`}>
+                            {!s.image && (
+                                <>
+                                    <div className={`absolute -top-16 -end-16 w-72 h-72 rounded-full ${orb1} blur-3xl`} />
+                                    <div className={`absolute -bottom-20 -start-10 w-80 h-80 rounded-full ${orb2} blur-3xl`} />
+                                </>
                             )}
+                            <div className="relative">
+                                <span className="inline-block text-[11px] font-black tracking-[0.2em] uppercase rounded-full px-3 py-1 mb-4 text-white bg-white/15 border border-white/20">
+                                    LUXSIGN 141
+                                </span>
+                                <h2 className="text-3xl sm:text-5xl font-black text-white mb-3 leading-tight">{title}</h2>
+                                {subtitle && <p className="text-sm sm:text-base text-white/70 max-w-md mx-auto mb-7 leading-relaxed">{subtitle}</p>}
+                                {ctaText && (
+                                    s.cta_link
+                                        ? <a href={s.cta_link} className="inline-block bg-gold text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-gold/30 hover:bg-white hover:text-ink hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">{ctaText}</a>
+                                        : <span className="inline-block bg-gold text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-gold/30">{ctaText}</span>
+                                )}
+                            </div>
                         </div>
                     );
                 })}
@@ -164,13 +186,13 @@ function HeroSlider({ slides }) {
             {slides.length > 1 && (
                 <>
                     <button onClick={prev} aria-label="prev"
-                        className="absolute top-1/2 -translate-y-1/2 end-3 w-9 h-9 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center backdrop-blur-sm transition-colors">›</button>
+                        className="absolute top-1/2 -translate-y-1/2 end-3 w-10 h-10 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center backdrop-blur-md border border-white/20 shadow-sm transition-colors">›</button>
                     <button onClick={next} aria-label="next"
-                        className="absolute top-1/2 -translate-y-1/2 start-3 w-9 h-9 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center backdrop-blur-sm transition-colors">‹</button>
-                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                        className="absolute top-1/2 -translate-y-1/2 start-3 w-10 h-10 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center backdrop-blur-md border border-white/20 shadow-sm transition-colors">‹</button>
+                    <div className="absolute bottom-5 left-0 right-0 flex justify-center gap-2">
                         {slides.map((_, i) => (
                             <button key={i} onClick={() => setCurrent(i)} aria-label={`slide ${i+1}`}
-                                className={`h-2 rounded-full transition-all ${i === current ? 'bg-white w-6' : 'bg-white/40 w-2'}`} />
+                                className={`h-2 rounded-full transition-all duration-300 ${i === current ? 'bg-white w-7' : 'bg-white/40 w-2'}`} />
                         ))}
                     </div>
                 </>
@@ -183,6 +205,7 @@ function HeroSlider({ slides }) {
 function ProductCard({ product, onOpen }) {
     const { locale, t } = useLocale();
     const videoRef = useRef(null);
+    const cardRef = useRef(null);
     const [hovering, setHovering] = useState(false);
 
     const name = localField(product, 'name', locale);
@@ -230,8 +253,29 @@ function ProductCard({ product, onOpen }) {
         }
     }
 
+    // Touch devices never fire mouseenter/mouseleave — instead, autoplay the
+    // preview video once the card scrolls into view, so a finger swiping
+    // past it on mobile gets the same preview a mouse hover gives on desktop.
+    useEffect(() => {
+        if (!product.video) return;
+        if (typeof window === 'undefined' || !window.matchMedia('(hover: none)').matches) return;
+        const el = cardRef.current;
+        if (!el) return;
+        const observer = new IntersectionObserver(([entry]) => {
+            setHovering(entry.isIntersecting);
+            if (entry.isIntersecting) {
+                videoRef.current?.play().catch(() => {});
+            } else if (videoRef.current) {
+                videoRef.current.pause();
+                videoRef.current.currentTime = 0;
+            }
+        }, { threshold: 0.6 });
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [product.video]);
+
     return (
-        <div onClick={() => onOpen(product)}
+        <div ref={cardRef} onClick={() => onOpen(product)}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             className="bg-white dark:bg-ink-2 rounded-2xl overflow-hidden border-[1.5px] border-cream-3 dark:border-white/10 hover:border-gold-light hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer">
@@ -239,16 +283,12 @@ function ProductCard({ product, onOpen }) {
             {/* Image / Video */}
             <div className="h-40 bg-gradient-to-br from-cream-2 to-cream-3 dark:from-ink dark:to-ink-2 flex items-center justify-center text-4xl relative overflow-hidden">
                 {product.image
-                    ? (
-                        <div className="tint-navy w-full h-full">
-                            <img src={`/storage/${product.image}`} alt={name} className={`w-full h-full object-cover ${soldOut ? 'opacity-50' : ''}`} />
-                        </div>
-                    )
+                    ? <img src={`/storage/${product.image}`} alt={name} className={`w-full h-full object-cover ${soldOut ? 'opacity-50' : ''}`} />
                     : (product.icon || '📦')
                 }
                 {soldOut && (
                     <div className="absolute inset-0 bg-ink/50 flex items-center justify-center z-10">
-                        <span className="bg-white text-ink text-xs font-black px-3 py-1.5 rounded-full">نفذت الكمية</span>
+                        <span className="bg-white text-ink text-xs font-black px-3 py-1.5 rounded-full">{t('soldOutLabel')}</span>
                     </div>
                 )}
                 {discount && !soldOut && (
@@ -267,7 +307,7 @@ function ProductCard({ product, onOpen }) {
                 )}
                 {product.badge && (
                     <span className="absolute top-2.5 right-2.5 bg-gold text-white text-xs font-bold px-2 py-0.5 rounded-full z-10">
-                        {product.badge}
+                        {localField(product, 'badge', locale)}
                     </span>
                 )}
                 {product.video && (
@@ -287,7 +327,7 @@ function ProductCard({ product, onOpen }) {
                             {discount && <span className="text-xs text-muted line-through">{product.compare_price}₪</span>}
                             <p className="text-base font-black text-ink dark:text-cream">{getStartingPrice()}₪</p>
                         </div>
-                        {lowStock && <p className="text-[11px] font-bold text-orange-500 mt-0.5">باقي {product.stock_quantity} فقط!</p>}
+                        {lowStock && <p className="text-[11px] font-bold text-orange-500 mt-0.5">{t('lowStockLabel')(product.stock_quantity)}</p>}
                     </div>
                 )}
             </div>
@@ -338,6 +378,7 @@ function StoreContent({ heroSlides, categories, products }) {
 
     return (
         <div className="min-h-screen bg-cream dark:bg-ink font-cairo transition-colors">
+            <Head title={t('storeTitle')} />
             {/* Top bar */}
             <div className="bg-ink text-center text-xs py-2 text-white/50 tracking-wide">
                 🚚 {t('topBanner')} — <span className="text-gold">{t('topBannerCta')}</span>
@@ -427,11 +468,7 @@ function StoreContent({ heroSlides, categories, products }) {
                                     className="shrink-0 flex flex-col items-center gap-2 w-24 group snap-start">
                                     <div className={`relative w-24 h-24 rounded-2xl overflow-hidden flex items-center justify-center text-3xl transition-all duration-300 border-2 ${active ? 'border-gold shadow-lg shadow-gold/20 scale-105' : 'border-cream-3 dark:border-white/10 group-hover:border-gold-light'} ${cat.image ? '' : 'bg-gradient-to-br from-cream-2 to-cream-3 dark:from-ink-2 dark:to-ink'}`}>
                                         {cat.image
-                                            ? (
-                                                <div className="tint-navy w-full h-full">
-                                                    <img src={`/storage/${cat.image}`} alt={name} className="w-full h-full object-cover" />
-                                                </div>
-                                            )
+                                            ? <img src={`/storage/${cat.image}`} alt={name} className="w-full h-full object-cover" />
                                             : (cat.icon || '📦')
                                         }
                                         {kidsCount > 0 && (
@@ -504,7 +541,7 @@ function StoreContent({ heroSlides, categories, products }) {
                     </div>
                     <div className="flex flex-wrap justify-center gap-3 mb-5">
                         {siteSettings?.whatsapp_number && (
-                            <a href={WA_LINK(waMsg('استفسار', '', ''), siteSettings.whatsapp_number)} target="_blank" rel="noreferrer"
+                            <a href={WA_LINK(waMsg(t('inquiryWA'), '', ''), siteSettings.whatsapp_number)} target="_blank" rel="noreferrer"
                                 className="flex items-center gap-1.5 bg-green-500/20 text-green-400 border border-green-500/30 text-xs font-bold px-3 py-2 rounded-xl hover:bg-green-500 hover:text-white transition-colors">
                                 💬 {t('footerWA')}
                             </a>
@@ -518,13 +555,13 @@ function StoreContent({ heroSlides, categories, products }) {
                         {siteSettings?.tiktok_url && (
                             <a href={siteSettings.tiktok_url} target="_blank" rel="noreferrer"
                                 className="flex items-center gap-1.5 bg-white/5 text-white/40 border border-white/10 text-xs font-bold px-3 py-2 rounded-xl hover:bg-gold hover:text-white hover:border-gold transition-colors">
-                                🎵 تيك توك
+                                🎵 {t('tiktokLabel')}
                             </a>
                         )}
                         {siteSettings?.facebook_url && (
                             <a href={siteSettings.facebook_url} target="_blank" rel="noreferrer"
                                 className="flex items-center gap-1.5 bg-white/5 text-white/40 border border-white/10 text-xs font-bold px-3 py-2 rounded-xl hover:bg-gold hover:text-white hover:border-gold transition-colors">
-                                📘 صفحة فيسبوك
+                                📘 {t('facebookPageLabel')}
                             </a>
                         )}
                     </div>
@@ -581,15 +618,12 @@ function FAQ() {
 
 export default function Index({ heroSlides, categories, products }) {
     return (
-        <>
-            <Head title="المتجر" />
-            <ThemeProvider>
-                <LocaleProvider>
-                    <CartProvider>
-                        <StoreContent heroSlides={heroSlides} categories={categories} products={products} />
-                    </CartProvider>
-                </LocaleProvider>
-            </ThemeProvider>
-        </>
+        <ThemeProvider>
+            <LocaleProvider>
+                <CartProvider>
+                    <StoreContent heroSlides={heroSlides} categories={categories} products={products} />
+                </CartProvider>
+            </LocaleProvider>
+        </ThemeProvider>
     );
 }

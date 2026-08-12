@@ -80,6 +80,14 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
     const description = localField(product, 'description', locale);
     const categoryName = localField(product.category, 'name', locale);
 
+    const galleryImages = [product.image, ...(product.images || [])].filter(Boolean);
+    const [activeImage, setActiveImage] = useState(galleryImages[0] ?? null);
+
+    // Per-quantity labels (plate_qty) are admin free text — fall back to the
+    // Arabic version whenever no translation was entered for this locale.
+    const localeQtyLabels = locale === 'he' ? product.qty_labels_he : locale === 'en' ? product.qty_labels_en : null;
+    const qtyLabelAt = (i) => localeQtyLabels?.[i]?.trim() || product.qty_labels?.[i];
+
     const hasPresets = product.preset_sizes?.length > 0;
     const price = calcPrice(product, w, h, qty, selectedSize);
     const selectedIdx = isFixedPerSize ? (product.preset_sizes?.indexOf(selectedSize) ?? -1) : -1;
@@ -99,7 +107,7 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
 
         const missing = specFields.find(f => f.is_required && !String(specValues[f.id] ?? '').trim());
         if (missing) {
-            setSpecError(`الرجاء تعبئة "${missing.label}"`);
+            setSpecError(t('fillFieldError')(missing.label));
             return;
         }
         setSpecError('');
@@ -108,7 +116,7 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
         if (hasSizeInput) size = ` (${w}×${h} ${t('cm')})`;
         else if (isPlateQty) size = ` (${product.qty_labels?.[qty - 1] || qty})`;
         else if (isFixedPerSize && selectedSize) size = ` (${selectedSize} ${t('cm')})`;
-        else if (isFixedQty) size = ` (${selectedFixedSize ? selectedFixedSize + ' — ' : ''}${qty} قطعة)`;
+        else if (isFixedQty) size = ` (${selectedFixedSize ? selectedFixedSize + ' — ' : ''}${qty} ${t('pieceUnit')})`;
 
         const specs = specFields.map(f => ({ label: f.label, value: specValues[f.id] ?? '' })).filter(s => s.value !== '');
 
@@ -150,16 +158,24 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
                         />
                     </div>
                 ) : (
-                    <div className="mx-4 mt-4 h-44 bg-gradient-to-br from-cream-2 to-cream-3 dark:from-ink dark:to-ink-2 rounded-xl overflow-hidden flex items-center justify-center text-5xl">
-                        {product.image
-                            ? (
-                                <div className="tint-navy w-full h-full">
-                                    <img src={`/storage/${product.image}`} alt={name} className="w-full h-full object-cover" />
-                                </div>
-                            )
-                            : (product.icon || '📦')
-                        }
-                    </div>
+                    <>
+                        <div className="mx-4 mt-4 h-44 bg-gradient-to-br from-cream-2 to-cream-3 dark:from-ink dark:to-ink-2 rounded-xl overflow-hidden flex items-center justify-center text-5xl">
+                            {activeImage
+                                ? <img src={`/storage/${activeImage}`} alt={name} className="w-full h-full object-contain" />
+                                : (product.icon || '📦')
+                            }
+                        </div>
+                        {galleryImages.length > 1 && (
+                            <div className="mx-4 mt-2 flex gap-2 overflow-x-auto scrollbar-hide">
+                                {galleryImages.map(path => (
+                                    <button key={path} type="button" onClick={() => setActiveImage(path)}
+                                        className={`shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors ${activeImage === path ? 'border-gold' : 'border-cream-3 dark:border-white/10 opacity-70 hover:opacity-100'}`}>
+                                        <img src={`/storage/${path}`} alt="" className="w-full h-full object-cover" />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </>
                 )}
 
                 <div className="px-4 pb-6 mt-4 space-y-4">
@@ -208,7 +224,7 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
                                 {product.preset_sizes.map((qPrice, i) => {
                                     const q = i + 1;
                                     const active = qty === q;
-                                    const qLabel = product.qty_labels?.[i] || q;
+                                    const qLabel = qtyLabelAt(i) || q;
                                     return (
                                         <button key={q} onClick={() => setQty(q)}
                                             className={`py-2 border-2 rounded-lg text-xs font-bold transition-colors flex flex-col items-center
@@ -296,25 +312,35 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
                     {/* Custom spec fields */}
                     {specFields.length > 0 && (
                         <div className="space-y-3">
-                            <p className="text-xs font-bold tracking-widest uppercase text-muted">مواصفات الطلب</p>
-                            {specFields.map(field => (
+                            <p className="text-xs font-bold tracking-widest uppercase text-muted">{t('specsHeading')}</p>
+                            {specFields.map(field => {
+                                // Stored value/label sent to the order always stays the literal
+                                // Arabic text — the admin dashboard is Arabic-only and reads specs
+                                // back verbatim; only what the customer sees here is translated.
+                                const localeOptions = locale === 'he' ? field.options_he : locale === 'en' ? field.options_en : null;
+                                return (
                                 <div key={field.id}>
                                     <label className="text-xs font-bold text-muted block mb-1">
-                                        {field.label} {field.is_required && <span className="text-red-500">*</span>}
+                                        {localField(field, 'label', locale)} {field.is_required && <span className="text-red-500">*</span>}
                                     </label>
                                     {field.field_type === 'select' ? (
                                         <select value={specValues[field.id] ?? ''}
                                             onChange={e => setSpecValues(v => ({ ...v, [field.id]: e.target.value }))}
                                             className="w-full px-3 py-2 border-2 border-cream-3 dark:border-white/10 focus:border-gold rounded-lg text-sm text-ink dark:text-cream bg-white dark:bg-ink outline-none">
-                                            <option value="">— اختر —</option>
-                                            {(field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                            <option value="">{t('chooseOption')}</option>
+                                            {(field.options || []).map((opt, i) => (
+                                                <option key={opt} value={opt}>{localeOptions?.[i]?.trim() || opt}</option>
+                                            ))}
                                         </select>
                                     ) : field.field_type === 'boolean' ? (
                                         <label className="flex items-center gap-2 cursor-pointer">
+                                            {/* Stored value stays the literal Arabic 'نعم' regardless of
+                                                locale — the admin dashboard (Arabic-only) reads it back
+                                                verbatim; only the customer-facing label is translated. */}
                                             <input type="checkbox" checked={specValues[field.id] === 'نعم'}
                                                 onChange={e => setSpecValues(v => ({ ...v, [field.id]: e.target.checked ? 'نعم' : '' }))}
                                                 className="accent-gold" />
-                                            <span className="text-sm text-muted">نعم</span>
+                                            <span className="text-sm text-muted">{t('yes')}</span>
                                         </label>
                                     ) : (
                                         <input type={field.field_type === 'number' ? 'number' : 'text'}
@@ -323,7 +349,8 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
                                             className="w-full px-3 py-2 border-2 border-cream-3 dark:border-white/10 focus:border-gold rounded-lg text-sm text-ink dark:text-cream bg-white dark:bg-ink outline-none" />
                                     )}
                                 </div>
-                            ))}
+                                );
+                            })}
                             {specError && <p className="text-xs text-red-500 font-bold">{specError}</p>}
                         </div>
                     )}
@@ -331,7 +358,7 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
                     {/* Reference images to clarify what's wanted, attached to this item */}
                     <div>
                         <label className="text-xs font-bold tracking-widest uppercase text-muted block mb-2">
-                            صورة توضيحية (اختياري) — حتى {MAX_REF_IMAGES} صور
+                            {t('refImagesLabel')(MAX_REF_IMAGES)}
                         </label>
                         <div className="flex flex-wrap gap-2">
                             {refImagePreviews.map((src, i) => (
@@ -365,15 +392,15 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
 
                     {product.is_custom && (
                         <div className="bg-cream-2 dark:bg-ink rounded-xl p-3 text-xs text-muted leading-relaxed">
-                            💬 عبّي التفاصيل فوق، وبعد ما نستلم طلبك رح نتواصل معك بالسعر المناسب.
+                            {t('customOrderNote')}
                         </div>
                     )}
 
                     {soldOut && (
-                        <p className="text-sm text-red-500 font-bold">نفذت الكمية — غير متوفر حالياً</p>
+                        <p className="text-sm text-red-500 font-bold">{t('soldOutFull')}</p>
                     )}
                     {lowStock && (
-                        <p className="text-sm text-orange-500 font-bold">⚠️ باقي {product.stock_quantity} فقط!</p>
+                        <p className="text-sm text-orange-500 font-bold">{t('lowStockLabel')(product.stock_quantity)}</p>
                     )}
 
                     {/* Actions */}
@@ -385,7 +412,7 @@ export default function ProductDetail({ product, onClose, onOpenDesigner }) {
                             </Button>
                         )}
                         <Button variant="dark" className={`w-full py-3 ${soldOut ? 'opacity-40 cursor-not-allowed hover:bg-ink' : ''}`} onClick={handleAddCart} disabled={soldOut}>
-                            {soldOut ? 'نفذت الكمية' : product.is_custom ? 'إرسال الطلب' : t('addToCart')}
+                            {soldOut ? t('soldOutLabel') : product.is_custom ? t('submitOrder') : t('addToCart')}
                         </Button>
                         {!product.is_custom && (
                             <Button variant="wa" className="w-full py-3" onClick={handleWA}>
