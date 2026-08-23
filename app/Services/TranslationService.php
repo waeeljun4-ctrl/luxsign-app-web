@@ -21,6 +21,13 @@ class TranslationService
             return null;
         }
 
+        // Hebrew-speaking customers are shown "Israel" for delivery-area
+        // copy instead of a literal "West Bank" translation — only the
+        // Hebrew output is affected; the stored Arabic text is untouched.
+        if ($targetLang === 'he') {
+            $text = str_replace(['الضفة الغربية', 'الضفة'], 'إسرائيل', $text);
+        }
+
         try {
             $response = Http::timeout(8)->get(self::ENDPOINT, [
                 'q'        => $text,
