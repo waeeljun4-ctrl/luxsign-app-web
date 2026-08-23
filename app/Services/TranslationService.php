@@ -41,7 +41,16 @@ class TranslationService
 
             $translated = $response->json('responseData.translatedText');
 
-            return is_string($translated) && $translated !== '' ? $translated : null;
+            if (!is_string($translated) || $translated === '') {
+                return null;
+            }
+
+            // MyMemory occasionally returns XLIFF/HTML markup artifacts for
+            // non-linguistic input (bare numbers, symbols, sizes like 16") —
+            // strip that out so garbage never gets saved or overflows a column.
+            $translated = trim(strip_tags($translated));
+
+            return $translated !== '' ? mb_substr($translated, 0, 490) : null;
         } catch (\Throwable $e) {
             Log::warning('TranslationService failed', ['text' => $text, 'target' => $targetLang, 'error' => $e->getMessage()]);
             return null;
