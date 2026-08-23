@@ -1,4 +1,8 @@
 *
 !private/
 !public/
+!public/**
 !.gitignore
+
+# Exported order archives contain customer names/phones/addresses — never commit them.
+public/archives/**
