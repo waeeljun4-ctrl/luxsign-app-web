@@ -11,6 +11,7 @@ const ar = {
     addToCartShort: '+ السلة',
 
     sizeLabel: 'الحجم',
+    relatedProductsLabel: 'منتجات مشابهة',
     widthLabel: 'العرض (سم)',
     heightLabel: 'الارتفاع (سم)',
     diameterLabel: 'قطر الدائرة (سم)',
@@ -128,6 +129,7 @@ const he = {
     addToCartShort: '+ לסל',
 
     sizeLabel: 'מידה',
+    relatedProductsLabel: 'מוצרים דומים',
     widthLabel: 'רוחב (ס"מ)',
     heightLabel: 'גובה (ס"מ)',
     diameterLabel: 'קוטר (ס"מ)',
@@ -245,6 +247,7 @@ const en = {
     addToCartShort: '+ Cart',
 
     sizeLabel: 'Size',
+    relatedProductsLabel: 'Related products',
     widthLabel: 'Width (cm)',
     heightLabel: 'Height (cm)',
     diameterLabel: 'Diameter (cm)',

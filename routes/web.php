@@ -34,6 +34,7 @@ use Inertia\Inertia;
 
 // ── PUBLIC STORE ──
 Route::get('/',              [StoreController::class, 'index'])->name('home');
+Route::get('/product/{product}', [StoreController::class, 'product'])->name('store.product');
 Route::get('/portfolio',     [StoreController::class, 'portfolio'])->name('portfolio');
 Route::get('/testimonials',  [StoreController::class, 'testimonials'])->name('testimonials');
 Route::post('/chat', [ChatController::class, 'send'])->middleware('throttle:20,1')->name('chat.send');
