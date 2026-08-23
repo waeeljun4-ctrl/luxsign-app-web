@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\HeroSlide;
 use App\Services\ImageCompressionService;
+use App\Services\TranslationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -17,7 +18,7 @@ class HeroSlideController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, TranslationService $translator)
     {
         $data = $request->validate([
             'title'       => 'required|string|max:80',
@@ -33,12 +34,19 @@ class HeroSlideController extends Controller
             'sort_order'  => 'integer',
             'is_active'   => 'boolean',
         ]);
+
+        $data['title_he'] = $translator->translate($data['title'], 'he');
+        $data['title_en'] = $translator->translate($data['title'], 'en');
+        $data['subtitle_he'] = $translator->translate($data['subtitle'] ?? null, 'he');
+        $data['subtitle_en'] = $translator->translate($data['subtitle'] ?? null, 'en');
+        $data['cta_text_he'] = $translator->translate($data['cta_text'] ?? null, 'he');
+        $data['cta_text_en'] = $translator->translate($data['cta_text'] ?? null, 'en');
 
         HeroSlide::create($data);
         return back()->with('success', 'تم إضافة الشريحة ✅');
     }
 
-    public function update(Request $request, HeroSlide $heroSlide)
+    public function update(Request $request, HeroSlide $heroSlide, TranslationService $translator)
     {
         $data = $request->validate([
             'title'       => 'required|string|max:80',
@@ -54,6 +62,13 @@ class HeroSlideController extends Controller
             'sort_order'  => 'integer',
             'is_active'   => 'boolean',
         ]);
+
+        $data['title_he'] = $translator->translate($data['title'], 'he');
+        $data['title_en'] = $translator->translate($data['title'], 'en');
+        $data['subtitle_he'] = $translator->translate($data['subtitle'] ?? null, 'he');
+        $data['subtitle_en'] = $translator->translate($data['subtitle'] ?? null, 'en');
+        $data['cta_text_he'] = $translator->translate($data['cta_text'] ?? null, 'he');
+        $data['cta_text_en'] = $translator->translate($data['cta_text'] ?? null, 'en');
 
         $heroSlide->update($data);
         return back()->with('success', 'تم تحديث الشريحة ✅');

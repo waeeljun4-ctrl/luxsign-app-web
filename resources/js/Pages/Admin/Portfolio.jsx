@@ -68,17 +68,10 @@ function ProjectForm({ open, onClose, project }) {
                 <form onSubmit={submit} className="space-y-3">
                     <Input label="عنوان العمل" value={data.title} onChange={e => setData('title', e.target.value)}
                         error={errors.title} placeholder="قارمة دائرية مضيئة — رام الله" />
-                    <div className="grid grid-cols-2 gap-3">
-                        <Input label="العنوان بالعبري" value={data.title_he} onChange={e => setData('title_he', e.target.value)} />
-                        <Input label="العنوان بالإنجليزي" value={data.title_en} onChange={e => setData('title_en', e.target.value)} />
-                    </div>
 
                     <Textarea label="الوصف" value={data.description} onChange={e => setData('description', e.target.value)}
                         rows={2} placeholder="قارمة LED دائرية بإضاءة بيضاء ناعمة لمحل مجوهرات" />
-                    <div className="grid grid-cols-2 gap-3">
-                        <Textarea label="الوصف بالعبري" value={data.description_he} onChange={e => setData('description_he', e.target.value)} rows={2} />
-                        <Textarea label="الوصف بالإنجليزي" value={data.description_en} onChange={e => setData('description_en', e.target.value)} rows={2} />
-                    </div>
+                    <p className="text-[11px] text-muted -mt-1.5">🌐 العنوان والوصف يُترجمان تلقائياً للعبري والإنجليزي</p>
 
                     <div className="grid grid-cols-3 gap-3">
                         <Input label="التصنيف (اختياري)" value={data.category} onChange={e => setData('category', e.target.value)}

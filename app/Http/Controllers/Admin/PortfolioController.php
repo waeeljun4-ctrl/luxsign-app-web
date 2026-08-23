@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PortfolioProject;
 use App\Services\ImageCompressionService;
+use App\Services\TranslationService;
 use App\Services\VideoCompressionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -36,9 +37,14 @@ class PortfolioController extends Controller
         ];
     }
 
-    public function store(Request $request, ImageCompressionService $imageCompressor, VideoCompressionService $videoCompressor)
+    public function store(Request $request, ImageCompressionService $imageCompressor, VideoCompressionService $videoCompressor, TranslationService $translator)
     {
         $data = $request->validate($this->validateFields());
+
+        $data['title_he'] = $translator->translate($data['title'], 'he');
+        $data['title_en'] = $translator->translate($data['title'], 'en');
+        $data['description_he'] = $translator->translate($data['description'] ?? null, 'he');
+        $data['description_en'] = $translator->translate($data['description'] ?? null, 'en');
 
         if ($request->hasFile('image')) {
             $data['image'] = $imageCompressor->compressAndStore($request->file('image'), 'portfolio');
@@ -55,7 +61,13 @@ class PortfolioController extends Controller
     {
         $imageCompressor = app(ImageCompressionService::class);
         $videoCompressor = app(VideoCompressionService::class);
+        $translator = app(TranslationService::class);
         $data = $request->validate($this->validateFields());
+
+        $data['title_he'] = $translator->translate($data['title'], 'he');
+        $data['title_en'] = $translator->translate($data['title'], 'en');
+        $data['description_he'] = $translator->translate($data['description'] ?? null, 'he');
+        $data['description_en'] = $translator->translate($data['description'] ?? null, 'en');
 
         if ($request->hasFile('image')) {
             if ($portfolioProject->image) Storage::disk('public')->delete($portfolioProject->image);

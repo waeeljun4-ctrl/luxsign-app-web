@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Testimonial;
 use App\Services\ImageCompressionService;
+use App\Services\TranslationService;
 use App\Services\VideoCompressionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -36,9 +37,12 @@ class TestimonialController extends Controller
         ];
     }
 
-    public function store(Request $request, ImageCompressionService $imageCompressor, VideoCompressionService $videoCompressor)
+    public function store(Request $request, ImageCompressionService $imageCompressor, VideoCompressionService $videoCompressor, TranslationService $translator)
     {
         $data = $request->validate($this->validateFields());
+
+        $data['text_he'] = $translator->translate($data['text'], 'he');
+        $data['text_en'] = $translator->translate($data['text'], 'en');
 
         if ($request->hasFile('image')) {
             $data['image'] = $imageCompressor->compressAndStore($request->file('image'), 'testimonials');
@@ -55,7 +59,11 @@ class TestimonialController extends Controller
     {
         $imageCompressor = app(ImageCompressionService::class);
         $videoCompressor = app(VideoCompressionService::class);
+        $translator = app(TranslationService::class);
         $data = $request->validate($this->validateFields());
+
+        $data['text_he'] = $translator->translate($data['text'], 'he');
+        $data['text_en'] = $translator->translate($data['text'], 'en');
 
         if ($request->hasFile('image')) {
             if ($testimonial->image) Storage::disk('public')->delete($testimonial->image);

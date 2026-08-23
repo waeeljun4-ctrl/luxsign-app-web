@@ -60,10 +60,7 @@ function CatForm({ open, onClose, category, topLevelCategories }) {
         <Modal open={open} onClose={onClose} title={isEdit ? 'تعديل الصنف' : 'إضافة صنف'} maxWidth="max-w-sm">
             <form onSubmit={submit} className="space-y-3">
                 <Input label="اسم الصنف" value={data.name} onChange={e=>setData('name',e.target.value)} error={errors.name} placeholder="قارمات مضيئة" />
-                <div className="grid grid-cols-2 gap-3">
-                    <Input label="بالعبري (اختياري) ✡" value={data.name_he} onChange={e=>setData('name_he',e.target.value)} placeholder="שלט מואר" />
-                    <Input label="بالإنجليزي (اختياري) 🌍" value={data.name_en} onChange={e=>setData('name_en',e.target.value)} placeholder="Illuminated Sign" />
-                </div>
+                <p className="text-[11px] text-muted -mt-1.5">🌐 تُترجم تلقائياً للعبري والإنجليزي</p>
                 <div className="flex flex-col gap-1">
                     <label className="text-xs font-bold tracking-widest uppercase text-muted">الصنف الأب (اختياري)</label>
                     <select value={data.parent_id} onChange={e=>setData('parent_id', e.target.value)}

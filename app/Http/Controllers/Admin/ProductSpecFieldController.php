@@ -6,10 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductSpecField;
 use App\Models\SpecTemplate;
+use App\Services\TranslationService;
 use Illuminate\Http\Request;
 
 class ProductSpecFieldController extends Controller
 {
+    public function __construct(private TranslationService $translator)
+    {
+    }
+
     /**
      * Copies a template's fields into this product's own, independent
      * field set — from this point on the product's fields are its own;
@@ -68,7 +73,7 @@ class ProductSpecFieldController extends Controller
 
     private function validatedField(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'label' => 'required|string|max:100',
             'label_he' => 'nullable|string|max:100',
             'label_en' => 'nullable|string|max:100',
@@ -82,5 +87,12 @@ class ProductSpecFieldController extends Controller
             'options_en.*' => 'nullable|string|max:100',
             'is_required' => 'boolean',
         ]);
+
+        $data['label_he'] = $this->translator->translate($data['label'], 'he');
+        $data['label_en'] = $this->translator->translate($data['label'], 'en');
+        $data['options_he'] = $this->translator->translateArray($data['options'] ?? null, 'he');
+        $data['options_en'] = $this->translator->translateArray($data['options'] ?? null, 'en');
+
+        return $data;
     }
 }

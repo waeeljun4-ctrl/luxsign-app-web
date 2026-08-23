@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Services\ImageCompressionService;
+use App\Services\TranslationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -18,7 +19,7 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, TranslationService $translator)
     {
         $data = $request->validate([
             'parent_id'  => 'nullable|exists:categories,id',
@@ -31,11 +32,14 @@ class CategoryController extends Controller
             'is_active'  => 'boolean',
         ]);
 
+        $data['name_he'] = $translator->translate($data['name'], 'he');
+        $data['name_en'] = $translator->translate($data['name'], 'en');
+
         Category::create($data);
         return back()->with('success', 'تم إضافة الصنف ✅');
     }
 
-    public function update(Request $request, Category $category)
+    public function update(Request $request, Category $category, TranslationService $translator)
     {
         $data = $request->validate([
             'parent_id'  => ['nullable', 'exists:categories,id', Rule::notIn([$category->id])],
@@ -46,6 +50,9 @@ class CategoryController extends Controller
             'sort_order' => 'integer',
             'is_active'  => 'boolean',
         ]);
+
+        $data['name_he'] = $translator->translate($data['name'], 'he');
+        $data['name_en'] = $translator->translate($data['name'], 'en');
 
         $category->update($data);
         return back()->with('success', 'تم تحديث الصنف ✅');

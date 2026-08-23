@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\SpecTemplate;
 use App\Services\ImageCompressionService;
+use App\Services\TranslationService;
 use App\Services\VideoCompressionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -129,12 +130,21 @@ class ProductController extends Controller
         return $data;
     }
 
-    public function store(Request $request, ImageCompressionService $imageCompressor, VideoCompressionService $videoCompressor)
+    public function store(Request $request, ImageCompressionService $imageCompressor, VideoCompressionService $videoCompressor, TranslationService $translator)
     {
         // track_stock/stock_quantity are managed exclusively from the
         // Inventory page now — a new product just keeps the "unlimited
         // stock" default (track_stock=false) until set there.
         $data = $this->parseArrayFields($request->validate($this->validateFields()));
+
+        $data['name_he'] = $translator->translate($data['name'], 'he');
+        $data['name_en'] = $translator->translate($data['name'], 'en');
+        $data['description_he'] = $translator->translate($data['description'] ?? null, 'he');
+        $data['description_en'] = $translator->translate($data['description'] ?? null, 'en');
+        $data['badge_he'] = $translator->translate($data['badge'] ?? null, 'he');
+        $data['badge_en'] = $translator->translate($data['badge'] ?? null, 'en');
+        $data['qty_labels_he'] = $translator->translateArray($data['qty_labels'] ?? null, 'he');
+        $data['qty_labels_en'] = $translator->translateArray($data['qty_labels'] ?? null, 'en');
 
         if ($request->hasFile('image')) {
             $data['image'] = $imageCompressor->compressAndStore($request->file('image'), 'products');
@@ -154,11 +164,20 @@ class ProductController extends Controller
         return back()->with('success', 'تم إضافة المنتج ✅');
     }
 
-    public function update(Request $request, Product $product, ImageCompressionService $imageCompressor, VideoCompressionService $videoCompressor)
+    public function update(Request $request, Product $product, ImageCompressionService $imageCompressor, VideoCompressionService $videoCompressor, TranslationService $translator)
     {
         // track_stock/stock_quantity are managed exclusively from the
         // Inventory page now — leave whatever is already set untouched.
         $data = $this->parseArrayFields($request->validate($this->validateFields()));
+
+        $data['name_he'] = $translator->translate($data['name'], 'he');
+        $data['name_en'] = $translator->translate($data['name'], 'en');
+        $data['description_he'] = $translator->translate($data['description'] ?? null, 'he');
+        $data['description_en'] = $translator->translate($data['description'] ?? null, 'en');
+        $data['badge_he'] = $translator->translate($data['badge'] ?? null, 'he');
+        $data['badge_en'] = $translator->translate($data['badge'] ?? null, 'en');
+        $data['qty_labels_he'] = $translator->translateArray($data['qty_labels'] ?? null, 'he');
+        $data['qty_labels_en'] = $translator->translateArray($data['qty_labels'] ?? null, 'en');
 
         if ($request->hasFile('image')) {
             if ($product->image) Storage::disk('public')->delete($product->image);

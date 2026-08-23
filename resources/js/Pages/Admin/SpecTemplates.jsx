@@ -64,20 +64,11 @@ function FieldForm({ open, onClose, templateId, field }) {
                         {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                 </div>
-                <Input label="اسم الحقل بالعبري ✡ (اختياري)" value={data.label_he}
-                    onChange={e => setData('label_he', e.target.value)} placeholder="למשל: סוג תאורה" />
-                <Input label="اسم الحقل بالإنجليزي 🌍 (اختياري)" value={data.label_en}
-                    onChange={e => setData('label_en', e.target.value)} placeholder="e.g. Lighting type" />
+                <p className="text-[11px] text-muted -mt-1">🌐 تُترجم تلقائياً للعبري والإنجليزي</p>
                 {data.field_type === 'select' && (
-                    <>
-                        <Input label="الخيارات (افصل بفاصلة)" value={data.options}
-                            onChange={e => setData('options', e.target.value)}
-                            error={errors.options} placeholder="أبيض, أصفر دافئ, RGB متعدد" />
-                        <Input label="الخيارات بالعبري ✡ (اختياري — بنفس الترتيب)" value={data.options_he}
-                            onChange={e => setData('options_he', e.target.value)} placeholder="לבן, צהוב חם, RGB" />
-                        <Input label="الخيارات بالإنجليزي 🌍 (اختياري — بنفس الترتيب)" value={data.options_en}
-                            onChange={e => setData('options_en', e.target.value)} placeholder="White, Warm yellow, RGB" />
-                    </>
+                    <Input label="الخيارات (افصل بفاصلة)" value={data.options}
+                        onChange={e => setData('options', e.target.value)}
+                        error={errors.options} placeholder="أبيض, أصفر دافئ, RGB متعدد" />
                 )}
                 {data.field_type === 'preview' && (
                     <div className="flex flex-col gap-1">

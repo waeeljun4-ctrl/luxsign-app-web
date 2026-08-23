@@ -59,23 +59,14 @@ function SlideForm({ open, onClose, slide }) {
         <Modal open={open} onClose={onClose} title={isEdit ? 'تعديل الشريحة' : 'إضافة شريحة'} maxWidth="max-w-md">
             <form onSubmit={submit} className="space-y-3">
                 <Input label="العنوان (عربي)" value={data.title} onChange={e=>setData('title',e.target.value)} error={errors.title} placeholder="قارمات مضيئة بتصميمك أنت" />
-                <div className="grid grid-cols-2 gap-3">
-                    <Input label="العنوان بالعبري" value={data.title_he} onChange={e=>setData('title_he',e.target.value)} />
-                    <Input label="العنوان بالإنجليزي" value={data.title_en} onChange={e=>setData('title_en',e.target.value)} />
-                </div>
 
                 <Textarea label="الوصف (عربي)" value={data.subtitle} onChange={e=>setData('subtitle',e.target.value)} rows={2} placeholder="صمّم لوحتك بالشكل والحجم اللي بدك ياه" />
-                <div className="grid grid-cols-2 gap-3">
-                    <Textarea label="الوصف بالعبري" value={data.subtitle_he} onChange={e=>setData('subtitle_he',e.target.value)} rows={2} />
-                    <Textarea label="الوصف بالإنجليزي" value={data.subtitle_en} onChange={e=>setData('subtitle_en',e.target.value)} rows={2} />
-                </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                     <Input label="نص الزر" value={data.cta_text} onChange={e=>setData('cta_text',e.target.value)} placeholder="تصفح المنتجات" />
-                    <Input label="الزر بالعبري" value={data.cta_text_he} onChange={e=>setData('cta_text_he',e.target.value)} />
-                    <Input label="الزر بالإنجليزي" value={data.cta_text_en} onChange={e=>setData('cta_text_en',e.target.value)} />
+                    <Input label="رابط الزر (اختياري)" value={data.cta_link} onChange={e=>setData('cta_link',e.target.value)} placeholder="/#products أو رابط خارجي" />
                 </div>
-                <Input label="رابط الزر (اختياري)" value={data.cta_link} onChange={e=>setData('cta_link',e.target.value)} placeholder="/#products أو رابط خارجي" />
+                <p className="text-[11px] text-muted -mt-1.5">🌐 العنوان والوصف ونص الزر تُترجم تلقائياً للعبري والإنجليزي</p>
 
                 <div className="grid grid-cols-2 gap-3">
                     <Input label="الترتيب" type="number" value={data.sort_order} onChange={e=>setData('sort_order',Number(e.target.value))} />

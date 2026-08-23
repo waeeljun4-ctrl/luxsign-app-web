@@ -5,11 +5,16 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SpecTemplate;
 use App\Models\SpecTemplateField;
+use App\Services\TranslationService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class SpecTemplateController extends Controller
 {
+    public function __construct(private TranslationService $translator)
+    {
+    }
+
     public function index()
     {
         return Inertia::render('Admin/SpecTemplates', [
@@ -59,7 +64,7 @@ class SpecTemplateController extends Controller
 
     private function validatedField(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'label' => 'required|string|max:100',
             'label_he' => 'nullable|string|max:100',
             'label_en' => 'nullable|string|max:100',
@@ -72,5 +77,12 @@ class SpecTemplateController extends Controller
             'options_en' => 'nullable|array',
             'options_en.*' => 'nullable|string|max:100',
         ]);
+
+        $data['label_he'] = $this->translator->translate($data['label'], 'he');
+        $data['label_en'] = $this->translator->translate($data['label'], 'en');
+        $data['options_he'] = $this->translator->translateArray($data['options'] ?? null, 'he');
+        $data['options_en'] = $this->translator->translateArray($data['options'] ?? null, 'en');
+
+        return $data;
     }
 }

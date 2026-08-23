@@ -82,10 +82,7 @@ function TestimonialForm({ open, onClose, testimonial }) {
 
                     <Textarea label="نص الرأي" value={data.text} onChange={e => setData('text', e.target.value)}
                         error={errors.text} rows={3} placeholder="شغل ممتاز وجودة عالية..." />
-                    <div className="grid grid-cols-2 gap-3">
-                        <Textarea label="بالعبري" value={data.text_he} onChange={e => setData('text_he', e.target.value)} rows={3} />
-                        <Textarea label="بالإنجليزي" value={data.text_en} onChange={e => setData('text_en', e.target.value)} rows={3} />
-                    </div>
+                    <p className="text-[11px] text-muted -mt-1.5">🌐 يُترجم تلقائياً للعبري والإنجليزي</p>
 
                     <div className="grid grid-cols-2 gap-3">
                         <Input label="الترتيب" type="number" value={data.sort_order} onChange={e => setData('sort_order', Number(e.target.value))} />

@@ -491,6 +491,7 @@ export default function ProductEdit({ product, categories, specFields, specTempl
                                         ))}
                                     </Select>
                                 </div>
+                                <p className="text-[11px] text-muted -mt-1.5">🌐 تُترجم تلقائياً للعبري والإنجليزي</p>
 
                                 <Textarea label="الوصف" value={data.description}
                                     onChange={e => setData('description', e.target.value)}
@@ -501,29 +502,6 @@ export default function ProductEdit({ product, categories, specFields, specTempl
                                         onChange={e => setData('icon', e.target.value)} placeholder="🔆" />
                                     <Input label="الشارة" value={data.badge}
                                         onChange={e => setData('badge', e.target.value)} placeholder="الأكثر طلباً" />
-                                </div>
-                            </div>
-
-                            {/* الترجمات */}
-                            <div className="bg-white rounded-2xl border border-cream-3 p-4 space-y-3">
-                                <p className="font-black text-ink text-sm mb-1">🌐 الترجمات <span className="text-xs text-muted font-normal">(اختياري — إذا تُركت فارغة يُعرض العربي)</span></p>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Input label="الاسم بالعبري ✡" value={data.name_he}
-                                        onChange={e => setData('name_he', e.target.value)} placeholder="שם המוצר בעברית" />
-                                    <Input label="الاسم بالإنجليزي 🌍" value={data.name_en}
-                                        onChange={e => setData('name_en', e.target.value)} placeholder="Product name in English" />
-                                </div>
-                                <Textarea label="الوصف بالعبري ✡" value={data.description_he}
-                                    onChange={e => setData('description_he', e.target.value)}
-                                    placeholder="תיאור קצר של המוצר..." />
-                                <Textarea label="الوصف بالإنجليزي 🌍" value={data.description_en}
-                                    onChange={e => setData('description_en', e.target.value)}
-                                    placeholder="Short product description in English..." />
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Input label="الشارة بالعبري ✡" value={data.badge_he}
-                                        onChange={e => setData('badge_he', e.target.value)} placeholder="הכי מבוקש" />
-                                    <Input label="الشارة بالإنجليزي 🌍" value={data.badge_en}
-                                        onChange={e => setData('badge_en', e.target.value)} placeholder="Best seller" />
                                 </div>
                             </div>
 
@@ -655,15 +633,13 @@ export default function ProductEdit({ product, categories, specFields, specTempl
 
                                 {data.pricing_type === 'plate_qty' && (
                                     <Field label="الكميات والأسعار">
-                                        <p className="text-xs text-muted -mt-1 mb-1">التسمية بالعبري/الإنجليزي اختيارية — إذا تُركت فارغة يُعرض التسمية العربية.</p>
+                                        <p className="text-xs text-muted -mt-1 mb-1">🌐 التسمية تُترجم تلقائياً للعبري والإنجليزي.</p>
                                         <RepeatingRows
                                             rows={qtyRows}
                                             onChange={setQtyRows}
                                             addLabel="+ إضافة كمية"
                                             columns={[
                                                 { key: 'label', placeholder: 'التسمية (مثال: قطعة واحدة)' },
-                                                { key: 'labelHe', placeholder: 'بالعبري ✡ (اختياري)' },
-                                                { key: 'labelEn', placeholder: 'بالإنجليزي 🌍 (اختياري)' },
                                                 { key: 'price', placeholder: 'السعر (₪)', type: 'number', width: 'w-28' },
                                             ]}
                                         />
@@ -852,23 +828,10 @@ function SpecFieldForm({ product, field, onDone }) {
                     {SPEC_FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </Select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-                <Input label="اسم الحقل بالعبري ✡ (اختياري)" value={data.label_he}
-                    onChange={e => setData('label_he', e.target.value)} placeholder="למשל: סוג תאורה" />
-                <Input label="اسم الحقل بالإنجليزي 🌍 (اختياري)" value={data.label_en}
-                    onChange={e => setData('label_en', e.target.value)} placeholder="e.g. Lighting type" />
-            </div>
+            <p className="text-[11px] text-muted -mt-2">🌐 تُترجم تلقائياً للعبري والإنجليزي</p>
             {data.field_type === 'select' && (
-                <>
-                    <Input label="الخيارات (افصل بفاصلة)" value={data.options} onChange={e => setData('options', e.target.value)}
-                        error={errors.options} placeholder="أبيض, أصفر دافئ, RGB متعدد" />
-                    <div className="grid grid-cols-2 gap-3">
-                        <Input label="الخيارات بالعبري ✡ (اختياري — بنفس الترتيب)" value={data.options_he}
-                            onChange={e => setData('options_he', e.target.value)} placeholder="לבן, צהוב חם, RGB" />
-                        <Input label="الخيارات بالإنجليزي 🌍 (اختياري — بنفس الترتيب)" value={data.options_en}
-                            onChange={e => setData('options_en', e.target.value)} placeholder="White, Warm yellow, RGB" />
-                    </div>
-                </>
+                <Input label="الخيارات (افصل بفاصلة)" value={data.options} onChange={e => setData('options', e.target.value)}
+                    error={errors.options} placeholder="أبيض, أصفر دافئ, RGB متعدد" />
             )}
             {data.field_type === 'preview' && (
                 <Select label="شكل المعاينة" value={data.preview_shape} onChange={e => setData('preview_shape', e.target.value)}>
