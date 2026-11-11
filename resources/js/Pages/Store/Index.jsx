@@ -254,7 +254,7 @@ function StoreContent({ heroSlides, categories, products }) {
             <nav className="sticky top-0 z-30 bg-white/95 dark:bg-ink/95 backdrop-blur-md border-b border-cream-3 dark:border-white/10 h-14 flex items-center justify-between px-4 shadow-sm gap-3">
                 <div className="flex items-center gap-3 shrink-0">
                     <div className="hidden lg:flex items-center gap-4 text-sm font-bold">
-                        <Link href="/preview" className="text-gold hover:text-gold-light transition-colors">📸 عاين على محلك</Link>
+                        <a href="/preview" className="text-gold hover:text-gold-light transition-colors">📸 عاين على محلك</a>
                         <Link href="/portfolio" className="text-muted hover:text-ink dark:hover:text-cream transition-colors">{t('portfolioLabel')}</Link>
                         <Link href="/testimonials" className="text-muted hover:text-ink dark:hover:text-cream transition-colors">{t('testimonialsLabel')}</Link>
                     </div>
@@ -403,7 +403,7 @@ function StoreContent({ heroSlides, categories, products }) {
                         {t('footerTrust')}
                     </p>
                     <div className="flex justify-center gap-4 text-xs font-bold mb-5">
-                        <Link href="/preview" className="text-gold hover:text-gold-light transition-colors">📸 عاين على محلك</Link>
+                        <a href="/preview" className="text-gold hover:text-gold-light transition-colors">📸 عاين على محلك</a>
                         <Link href="/portfolio" className="text-white/40 hover:text-gold transition-colors">{t('portfolioLabel')}</Link>
                         <Link href="/testimonials" className="text-white/40 hover:text-gold transition-colors">{t('testimonialsLabel')}</Link>
                     </div>
