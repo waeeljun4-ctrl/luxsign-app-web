@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>استوديو LuxSign 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&amp;family=Aref+Ruqaa:wght@400;700&amp;family=Cairo:wght@400..900&amp;family=Lalezar&amp;family=Reem+Kufi:wght@400..700&amp;family=Tajawal:wght@400;500;700&amp;display=swap">
+<style>
+/* Layout: one full-bleed 3D storefront. The shop-name field floats over the top of it,
+   the tool dock sits on the bottom edge, and the sign stays framed in the space between. */
+:root{
+  color-scheme:dark;
+  --ink:#0c0d10; --ink-2:#15171b; --ink-3:#1f2228;
+  --hair:rgba(236,205,131,.2); --hair-2:rgba(255,255,255,.09);
+  --gold:#e3b856; --gold-hi:#f7df9f; --on-gold:#17130a;
+  --cream:#f5efe2; --cream-2:#c9c1b0; --mute:#8d8778;
+  --led:#ffd9a0;
+  --f-display:'Reem Kufi','Cairo',Tahoma,sans-serif;
+  --f-ui:'Cairo','Segoe UI',Tahoma,'Noto Sans Arabic',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;overflow:hidden;background:var(--ink);color:var(--cream);font-family:var(--f-ui);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold-hi);outline-offset:2px}
+
+#lx{position:relative;height:100%;overflow:hidden;direction:rtl;-webkit-user-select:none;user-select:none;
+  background:radial-gradient(120% 70% at 50% 34%,#23262e 0%,var(--ink) 72%)}
+#stage{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#stage.drag{cursor:grabbing}
+.vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 36%,rgba(0,0,0,0) 52%,rgba(0,0,0,.46) 100%)}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* top bar */
+.top{position:absolute;inset:0 0 auto 0;z-index:4;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:10px 0;pointer-events:none}
+.top::before{content:"";position:absolute;inset:0 0 -84px 0;z-index:-1;background:linear-gradient(to bottom,rgba(8,9,11,.78),rgba(8,9,11,0))}
+.top>*{pointer-events:auto}
+.brand{direction:ltr;font-family:var(--f-display);font-weight:700;font-size:16px;letter-spacing:.16em;color:var(--cream)}
+.brand b{color:var(--gold);font-weight:700;letter-spacing:.06em;margin-left:4px}
+.seg{display:flex;padding:3px;border-radius:999px;background:rgba(18,19,23,.86);border:1px solid var(--hair-2)}
+.seg button{display:flex;align-items:center;gap:6px;height:32px;padding:0 13px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--cream-2);transition:background .25s,color .25s}
+.seg button[aria-pressed="true"]{background:var(--gold);color:var(--on-gold)}
+.seg svg{width:15px;height:15px;flex:none}
+
+/* shop name */
+.name{position:absolute;inset:56px 0 auto 0;z-index:4;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.name>*{pointer-events:auto;width:100%;max-width:520px}
+.name-box{display:flex;align-items:center;height:50px;border-radius:16px;background:rgba(15,16,20,.88);border:1px solid var(--hair);box-shadow:0 12px 30px -14px rgba(0,0,0,.8);transition:border-color .2s}
+.name-box:focus-within{border-color:var(--gold)}
+.name-box label{flex:none;display:flex;align-items:center;height:22px;padding-inline:14px 11px;border-inline-end:1px solid var(--hair-2);font-size:11.5px;font-weight:700;color:var(--gold);white-space:nowrap}
+#nameIn{flex:1;min-width:0;height:100%;padding:0 12px;background:none;border:0;outline:0;font-size:18px;font-weight:700;color:var(--cream);-webkit-user-select:text;user-select:text}
+#nameIn::placeholder{color:var(--mute);font-weight:600}
+#nameClr{flex:none;width:32px;height:32px;margin-inline-end:9px;border-radius:50%;background:rgba(255,255,255,.07);color:var(--cream-2);font-size:18px;line-height:1}
+.ideas{display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:none;padding-block:1px}
+.ideas::-webkit-scrollbar{display:none}
+.ideas span{flex:none;font-size:11px;font-weight:700;color:var(--cream-2);text-shadow:0 1px 6px rgba(0,0,0,.9)}
+.ideas button{flex:none;height:30px;padding:0 10px;border-radius:999px;background:rgba(15,16,20,.8);border:1px solid var(--hair-2);font-size:11.5px;font-weight:700;color:var(--cream)}
+
+/* stage overlays */
+.hint{position:absolute;z-index:3;left:50%;bottom:calc(var(--dock-h,280px) + 14px);transform:translateX(-50%);display:flex;align-items:center;gap:7px;height:30px;padding:0 13px;border-radius:999px;background:rgba(12,13,16,.74);border:1px solid var(--hair-2);font-size:11.5px;font-weight:700;color:var(--cream);white-space:nowrap;pointer-events:none;transition:opacity .5s}
+.hint svg{width:14px;height:14px;color:var(--gold)}
+.hint.off{opacity:0}
+.dim{position:absolute;z-index:2;top:0;left:0;padding:2px 9px;border-radius:999px;background:var(--gold);color:var(--on-gold);font-size:11.5px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .3s}
+.dim.on{opacity:1}
+.flat{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:0 24px;text-align:center;pointer-events:none}
+.flat span{font-weight:900;font-size:clamp(34px,11vw,96px);line-height:1.3;color:var(--led);text-shadow:0 0 18px var(--led),0 0 64px var(--led)}
+.flat small{position:absolute;inset:auto 24px calc(var(--dock-h,280px) + 16px) 24px;font-size:12px;font-weight:600;color:var(--cream-2)}
+
+/* dock */
+.dock{position:absolute;inset:auto 0 0 0;z-index:5;max-width:780px;margin-inline:auto;border-top:1px solid var(--hair);border-radius:22px 22px 0 0;background:linear-gradient(to bottom,rgba(15,16,19,.93),rgba(11,12,14,.99));box-shadow:0 -20px 50px -22px rgba(0,0,0,.9)}
+.dock-in{display:flex;flex-direction:column;gap:8px;padding-block:6px 12px}
+.tabs{display:flex;gap:2px}
+.tabs button{position:relative;flex:1;min-width:0;height:38px;border-radius:10px;font-size:13px;font-weight:700;color:var(--cream-2);transition:color .2s}
+.tabs button[aria-selected="true"]{color:var(--gold-hi)}
+.tabs button[aria-selected="true"]::after{content:"";position:absolute;inset:auto 24% 3px 24%;height:2px;border-radius:2px;background:var(--gold)}
+.panels{display:flex;align-items:center;height:92px}
+.panel{width:100%;min-width:0}
+.strip{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 1px}
+.strip::-webkit-scrollbar{display:none}
+.opt{flex:1 0 94px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:86px;border-radius:14px;background:var(--ink-2);border:1px solid var(--hair-2);transition:border-color .2s,background .2s}
+.opt[aria-pressed="true"]{border-color:var(--gold);background:var(--ink-3)}
+.opt b{font-size:12px;font-weight:700;color:var(--cream)}
+.opt small{font-size:10px;font-weight:600;color:var(--mute)}
+.gl{display:flex;align-items:center;justify-content:center;height:34px;font-family:'Cairo',sans-serif;font-weight:900;font-size:25px;line-height:1}
+.gl-front{color:var(--led);text-shadow:0 0 10px var(--led)}
+.gl-halo{color:#08080a;text-shadow:0 0 5px var(--led),0 0 12px var(--led)}
+.gl-neon{color:transparent;-webkit-text-stroke:1.2px var(--led);text-shadow:0 0 9px var(--led)}
+.gl-box{height:27px;padding:0 10px;border-radius:4px;border:1.5px solid #5d6067;background:#08080a;color:var(--led);font-size:17px;box-shadow:0 0 12px -3px var(--led);margin-block:3px 4px}
+.opt.font{flex-basis:86px}
+.opt.font .gl{font-size:21px;color:var(--cream)}
+.opt.wall{flex-basis:84px}
+.th{width:58px;height:36px;border-radius:8px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);margin-bottom:3px}
+.sw-row{display:flex;align-items:center;gap:8px;height:46px}
+.sw-lab{flex:none;width:50px;font-size:11.5px;font-weight:700;color:var(--cream-2)}
+.sw-row .strip{flex:1;min-width:0;gap:5px}
+.sw{flex:none;width:38px;height:38px;padding:3px;border-radius:50%;border:2px solid transparent;transition:border-color .2s}
+.sw i{display:block;width:100%;height:100%;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
+.sw[aria-pressed="true"]{border-color:var(--gold)}
+.pill{flex:none;height:38px;padding:0 13px;border-radius:12px;background:var(--ink-2);border:1px solid var(--hair-2);font-size:12px;font-weight:700;color:var(--cream-2);display:flex;align-items:center;gap:6px;transition:border-color .2s,background .2s,color .2s}
+.pill[aria-pressed="true"]{border-color:var(--gold);background:var(--ink-3);color:var(--cream)}
+.size{display:flex;align-items:center;gap:12px;width:100%}
+.step{flex:none;width:44px;height:44px;border-radius:50%;background:var(--ink-2);border:1px solid var(--hair-2);font-size:22px;font-weight:700;line-height:1;color:var(--gold-hi)}
+.size-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.size-read{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;font-weight:600;color:var(--cream-2);font-variant-numeric:tabular-nums}
+.size-read b{font-size:15px;font-weight:800;color:var(--cream)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:30px;margin:0;background:none;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:6px;background:linear-gradient(to left,var(--gold) var(--p,30%),var(--ink-3) var(--p,30%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;margin-top:-10px;border-radius:50%;background:var(--gold-hi);border:3px solid var(--on-gold);box-shadow:0 2px 10px rgba(0,0,0,.6)}
+input[type=range]::-moz-range-track{height:6px;border-radius:6px;background:var(--ink-3)}
+input[type=range]::-moz-range-progress{height:6px;border-radius:6px;background:var(--gold)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--gold-hi);border:3px solid var(--on-gold)}
+.buy{display:flex;align-items:center;gap:14px;padding-top:10px;border-top:1px solid var(--hair-2)}
+.price{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+.price-lab{font-size:11px;font-weight:700;color:var(--cream-2)}
+.price-num{font-size:27px;font-weight:900;color:var(--gold-hi);font-variant-numeric:tabular-nums}
+.price-num span{margin-inline-start:4px;font-size:17px;font-weight:800}
+.price-sub{font-size:11px;font-weight:600;color:var(--mute);font-variant-numeric:tabular-nums}
+.cta{flex:none;display:flex;align-items:center;gap:8px;height:52px;padding:0 20px;border-radius:16px;background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:var(--on-gold);font-size:15px;font-weight:900;text-decoration:none;box-shadow:0 12px 26px -12px rgba(227,184,86,.8)}
+.cta svg{width:19px;height:19px;flex:none}
+
+@media (min-width:860px){
+  .brand{font-size:18px}
+  .name{inset:66px 0 auto 0}
+  .dock{inset:auto 0 18px 0;border:1px solid var(--hair);border-radius:22px}
+}
+@media (max-height:620px){
+  .ideas{display:none}
+  .panels{height:88px}
+  .opt{height:80px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="lx" lang="ar">
+  <canvas id="stage" tabindex="0" aria-label="عرض ثلاثي الأبعاد للقارمة على واجهة المحل. اسحب للتدوير، وبالأسهم من الكيبورد."></canvas>
+  <div class="flat" id="flat" hidden><span></span><small>العرض الثلاثي الأبعاد مش مدعوم على هذا المتصفح. التصميم والسعر شغّالين عادي.</small></div>
+  <div class="vig"></div>
+
+  <header class="top gut">
+    <div class="brand">LUXSIGN<b>141</b></div>
+    <div class="seg" id="sky" role="group" aria-label="وقت العرض">
+      <button type="button" data-night="0" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>نهار</button>
+      <button type="button" data-night="1" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>ليل</button>
+    </div>
+  </header>
+
+  <div class="name gut">
+    <div class="name-box">
+      <label for="nameIn">اسم المحل</label>
+      <input id="nameIn" type="text" maxlength="26" dir="auto" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="اكتبه هون وشوفه مضوّي">
+      <button type="button" id="nameClr" aria-label="مسح الاسم" hidden>×</button>
+    </div>
+    <div class="ideas" id="ideas"><span>جرّب</span></div>
+  </div>
+
+  <div class="dim" id="dimW"></div>
+  <div class="dim" id="dimH"></div>
+  <div class="hint" id="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5"/></svg><span id="hintTx">اسحب لتدوير القارمة</span></div>
+
+  <section class="dock" id="dock" aria-label="أدوات تصميم القارمة">
+    <div class="dock-in gut">
+      <div class="tabs" id="tabs" role="tablist">
+        <button type="button" role="tab" id="t-type" aria-controls="p-type" aria-selected="true">النوع</button>
+        <button type="button" role="tab" id="t-font" aria-controls="p-font" aria-selected="false">الخط</button>
+        <button type="button" role="tab" id="t-color" aria-controls="p-color" aria-selected="false">اللون</button>
+        <button type="button" role="tab" id="t-size" aria-controls="p-size" aria-selected="false">المقاس</button>
+        <button type="button" role="tab" id="t-wall" aria-controls="p-wall" aria-selected="false">الجدار</button>
+        <button type="button" role="tab" id="t-shop" aria-controls="p-shop" aria-selected="false">المحل</button>
+      </div>
+      <div class="panels">
+        <div class="panel" id="p-type" role="tabpanel" aria-labelledby="t-type"><div class="strip" id="typeStrip"></div></div>
+        <div class="panel" id="p-font" role="tabpanel" aria-labelledby="t-font" hidden><div class="strip" id="fontStrip"></div></div>
+        <div class="panel" id="p-color" role="tabpanel" aria-labelledby="t-color" hidden>
+          <div class="sw-row"><span class="sw-lab">الإضاءة</span><div class="strip" id="ledStrip"></div></div>
+          <div class="sw-row" id="bodyRow"><span class="sw-lab" id="bodyLab">الإطار</span><div class="strip" id="bodyStrip"></div></div>
+        </div>
+        <div class="panel" id="p-size" role="tabpanel" aria-labelledby="t-size" hidden>
+          <div class="size">
+            <button type="button" class="step" id="szMinus" aria-label="تصغير 5 سم">−</button>
+            <div class="size-mid">
+              <input type="range" id="szRange" min="40" max="400" step="5" value="160" aria-label="عرض القارمة بالسنتيمتر">
+              <div class="size-read"><span>العرض <b id="szW">160</b> سم</span><span>الارتفاع <b id="szH">42</b> سم</span></div>
+            </div>
+            <button type="button" class="step" id="szPlus" aria-label="تكبير 5 سم">+</button>
+          </div>
+        </div>
+        <div class="panel" id="p-wall" role="tabpanel" aria-labelledby="t-wall" hidden><div class="strip" id="wallStrip"></div></div>
+        <div class="panel" id="p-shop" role="tabpanel" aria-labelledby="t-shop" hidden>
+          <div class="sw-row"><span class="sw-lab">الموديل</span><div class="strip" id="shopStrip"></div></div>
+          <div class="sw-row">
+            <span class="sw-lab">عرض الباب</span>
+            <input type="range" id="doorRange" min="2.5" max="7" step="0.1" value="4.9" aria-label="عرض واجهة المحل بالمتر" style="flex:1;min-width:0">
+            <b id="doorW" style="flex:none;font-size:13px;color:var(--cream);min-width:32px;text-align:center;font-variant-numeric:tabular-nums">4.9</b>
+          </div>
+        </div>
+      </div>
+      <div class="buy">
+        <div class="price" aria-live="polite">
+          <span class="price-lab">السعر التقريبي</span>
+          <span class="price-num"><b id="priceNum">0</b><span>₪</span></span>
+          <span class="price-sub" id="priceSub"></span>
+        </div>
+        <a class="cta" id="cta" href="https://wa.me/970568804603" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8.5 8.5 0 0 1-12.7 7.4L3 21l1.7-5A8.5 8.5 0 1 1 21 12z"/></svg>اطلبها عالواتساب</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="/vendor/three/three.min.js"></script>
+<script src="/studio/lx3d-studio.js"></script>
+
+</body>
+</html>

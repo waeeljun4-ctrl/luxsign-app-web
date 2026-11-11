@@ -10,6 +10,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HeroSlideController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\SignPreviewController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\Admin\ArchiveController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
@@ -38,6 +39,10 @@ Route::get('/product/{product}', [StoreController::class, 'product'])->name('sto
 Route::get('/portfolio',     [StoreController::class, 'portfolio'])->name('portfolio');
 Route::get('/testimonials',  [StoreController::class, 'testimonials'])->name('testimonials');
 Route::post('/chat', [ChatController::class, 'send'])->middleware('throttle:20,1')->name('chat.send');
+
+// استوديو القارمة ثلاثي الأبعاد — بناية مولّدة، الزبون يصمم القارمة ويشوفها
+// فورًا بمنظور ثلاثي الأبعاد قبل ما يطلب
+Route::get('/preview', [SignPreviewController::class, 'index'])->name('preview.index');
 
 // ── AUTH ──
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
