@@ -23,3 +23,32 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# Browser caching for static files (images, fonts, plain CSS/JS outside the
+# versioned Vite build) — without this the browser re-downloads every asset
+# on every single page view instead of reusing its local copy. A moderate
+# window (not a full year) because some category/product images are saved
+# under a fixed filename and can be replaced in place by the admin panel.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg "access plus 7 days"
+    ExpiresByType image/png "access plus 7 days"
+    ExpiresByType image/gif "access plus 7 days"
+    ExpiresByType image/webp "access plus 7 days"
+    ExpiresByType image/svg+xml "access plus 7 days"
+    ExpiresByType image/x-icon "access plus 7 days"
+    ExpiresByType font/woff "access plus 30 days"
+    ExpiresByType font/woff2 "access plus 30 days"
+</IfModule>
+<IfModule mod_headers.c>
+    <FilesMatch "\.(jpe?g|png|gif|webp|svg|ico|woff2?)$">
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+
+    # /build/** is Vite's content-hashed output (vite build wipes and
+    # regenerates this folder, so this rule lives here, not inside it) — a
+    # changed file always gets a new filename, so it's safe to cache for a
+    # full year regardless of file type.
+    SetEnvIf Request_URI "^/build/" IS_VITE_BUILD
+    Header set Cache-Control "public, max-age=31536000, immutable" env=IS_VITE_BUILD
+</IfModule>
